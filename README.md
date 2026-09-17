@@ -14,11 +14,28 @@
 
 ## 快速开始
 
-```bash
-# 构建
-cargo build --release
+### 方式一：npm（推荐）
 
-# 运行（首次会自动生成 config.toml）
+```bash
+# 全局安装
+npm install -g aster-bot
+
+# 查看状态
+aster status
+
+# 启动
+aster start
+
+# 查看日志
+aster logs -f
+```
+
+### 方式二：从源码
+
+```bash
+git clone https://github.com/MimoKit/aster.git
+cd aster
+cargo build --release
 ./target/release/aster
 ```
 
@@ -35,21 +52,56 @@ ws://0.0.0.0:5310/onebot/v11/ws
 > `sudo setcap 'cap_net_bind_service=+ep' target/release/aster` 或用 sudo 启动，
 > 并把 `config.toml` 里的 `port` 改成 531。
 
+## 命令行
+
+npm 安装后提供 `aster` 命令：
+
+| 命令 | 作用 |
+|------|------|
+| `aster start` | 后台启动 |
+| `aster run` | 前台启动（日志打到终端） |
+| `aster stop` | 停止 |
+| `aster restart` | 重启 |
+| `aster status` | 查看运行状态 |
+| `aster logs -f` | 跟踪日志 |
+| `aster config` | 查看全部配置 |
+| `aster config get <键>` | 读取配置项 |
+| `aster config set <键> <值>` | 修改配置项 |
+| `aster init` | 只初始化配置与目录 |
+| `aster build` | 编译 Rust 可执行文件 |
+
+常用选项：`--home <目录>` 指定数据目录，`--port <端口>` 临时覆盖端口。
+
+### 配置文件位置
+
+默认数据目录是 `./aster-data`，可用 `ASTER_HOME` 或 `--home` 指定：
+
+```text
+aster-data/
+├── config.toml      运行配置
+├── aster.pid        进程号
+├── bin/aster        可执行文件
+└── logs/aster.log   运行日志
+```
+
 ## 没有协议端时如何自测
 
 内置了一个模拟协议端：
 
 ```bash
-# 终端 1
-cargo run --release
+# 终端 1：启动框架
+aster start
 
 # 终端 2：连接并上报一批样例事件
 cargo run --release --example mock_adapter
+
+# 查看框架处理结果
+aster logs -f
 ```
 
 ## 配置
 
-`config.toml`（首次运行从 `config/default.toml` 复制）：
+`config.toml`（首次运行从 `config/default.toml` 复制，位于数据目录下）：
 
 ```toml
 [bot]
@@ -209,12 +261,39 @@ if let Some(bot) = bots.get(&10001.into()).await {
 ## 测试
 
 ```bash
-cargo test                    # 74 个单元测试 + 9 个端到端测试
+cargo test                      # Rust：74 个单元 + 9 个端到端 + 1 个文档测试
 cargo test --test e2e_onebot11  # 仅端到端（真实 WebSocket 连接）
+node --test test/               # Node：37 个测试（配置、进程管理、参数解析）
 ```
 
-端到端测试覆盖：群/私聊消息规范化、通知与请求事件、API 调用与 `echo` 回执、
+Rust 侧端到端测试覆盖：群/私聊消息规范化、通知与请求事件、API 调用与 `echo` 回执、
 Token 鉴权（查询参数 + Bearer 头）、路径校验、未知事件容错、`message_sent`。
+
+## 常见问题
+
+**`aster start` 提示需要 cargo？**
+npm 包里不含预编译二进制时会用 `cargo` 就地编译（约 1 分钟，仅首次）。
+安装 Rust 即可：https://rustup.rs 。若已有编译好的二进制，
+可用 `ASTER_BINARY=/path/to/aster` 指定。
+
+**端口被占用？**
+```bash
+aster config set onebot11.port 5311
+aster restart
+```
+
+**想看收发的原始报文？**
+```bash
+aster config set log.level debug
+aster restart
+aster logs -f
+```
+
+**数据目录在哪？**
+```bash
+aster config path    # 打印配置文件路径
+aster status         # 显示数据目录与日志位置
+```
 
 ## 后续计划
 
