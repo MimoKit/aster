@@ -15,7 +15,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v11
         with:
           # 30 天没动静先提醒，再过 14 天关闭
           days-before-stale: 30
