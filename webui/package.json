@@ -20,7 +20,7 @@
     "@fontsource-variable/geist": "^5.2.6",
     "@fontsource-variable/geist-mono": "^5.2.6",
     "@tailwindcss/vite": "^4.1.14",
-    "@types/node": "^22.20.3",
+    "@types/node": "^26.5.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
     "@vitejs/plugin-react": "^5.0.4",
