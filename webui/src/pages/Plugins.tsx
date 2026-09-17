@@ -6,16 +6,20 @@
  */
 
 import { PuzzlePiece } from '@phosphor-icons/react';
-
+import { Badge, Card, Empty, ErrorState, Skeleton } from '../components/ui';
 import { api } from '../lib/api';
 import { useQuery } from '../lib/useQuery';
-import { Badge, Card, Empty, ErrorState, Skeleton } from '../components/ui';
 
 export function PluginsPage() {
-  const { data, loading, error, reload } = useQuery(() => api.plugins(), []);
+  const { data, loading, error, reload } = useQuery(() => api.plugins());
 
   if (loading && !data) return <PluginsSkeleton />;
-  if (error && !data) return <Card><ErrorState message={error} onRetry={reload} /></Card>;
+  if (error && !data)
+    return (
+      <Card>
+        <ErrorState message={error} onRetry={reload} />
+      </Card>
+    );
 
   const plugins = data?.plugins ?? [];
 
@@ -101,8 +105,8 @@ function PluginsSkeleton() {
       <Card>
         <Skeleton width="30%" height={14} />
       </Card>
-      {Array.from({ length: 2 }).map((_, i) => (
-        <Card key={i} title="加载中">
+      {['p1', 'p2'].map((key) => (
+        <Card key={key} title="加载中">
           <Skeleton width="45%" height={13} />
           <div className="mt-3">
             <Skeleton height={64} radius={6} />

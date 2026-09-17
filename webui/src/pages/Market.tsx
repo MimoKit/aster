@@ -6,16 +6,10 @@
  * 而不是假的开关按钮。
  */
 
+import { ArrowSquareOut, Copy, MagnifyingGlass, Storefront } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ArrowSquareOut,
-  Copy,
-  MagnifyingGlass,
-  Storefront,
-} from '@phosphor-icons/react';
-
-import { copyText } from '../lib/format';
 import { Badge, Button, Card, Empty, ErrorState, Skeleton } from '../components/ui';
+import { copyText } from '../lib/format';
 
 /** 市场清单地址，可用 VITE_ASTER_MARKET 覆盖 */
 const MARKET_URL =
@@ -135,8 +129,8 @@ export function MarketPage() {
 
       {state.loading ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
+          {['s1', 's2', 's3', 's4'].map((key) => (
+            <Card key={key}>
               <Skeleton width="40%" height={14} />
               <div className="mt-3">
                 <Skeleton height={12} />

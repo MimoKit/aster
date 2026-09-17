@@ -9,16 +9,16 @@ export interface Overview {
   bot: {
     name: string;
     version: string;
-    started_at: string;
+    startedAt: string;
     uptime: string;
-    uptime_secs: number;
+    uptimeSecs: number;
   };
   stats: {
     events: number;
     messages: number;
     notices: number;
     requests: number;
-    meta_events: number;
+    metaEvents: number;
     commands: number;
   };
   plugins: {
@@ -36,12 +36,12 @@ export interface Overview {
     auth: boolean;
   };
   bots: BotSummary[];
-  log_count: number;
+  logCount: number;
 }
 
 /** 在线账号摘要 */
 export interface BotSummary {
-  self_id: string;
+  selfId: string;
   nickname: string | null;
   online: boolean;
   connections: number;
@@ -49,13 +49,13 @@ export interface BotSummary {
 
 /** 账号详情 */
 export interface BotDetail {
-  self_id: string;
+  selfId: string;
   nickname: string | null;
   uin: string | null;
   avatar: string | null;
   online: boolean;
   connections: number;
-  connected_secs: number;
+  connectedSecs: number;
 }
 
 /** 插件规则 */
@@ -73,7 +73,7 @@ export interface PluginInfo {
   author: string;
   priority: number;
   enabled: boolean;
-  rule_count: number;
+  ruleCount: number;
   rules: PluginRule[];
 }
 
@@ -121,7 +121,7 @@ export interface SendMessageRequest {
   target: 'group' | 'private';
   id: string;
   message: unknown;
-  self_id?: string;
+  selfId?: string;
 }
 
 /** 发送消息结果 */
@@ -134,7 +134,7 @@ export interface SendMessageResult {
 export interface LiveEvent {
   name: string;
   time: number;
-  self_id: string | null;
+  selfId: string | null;
   raw: unknown;
 }
 

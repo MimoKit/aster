@@ -1,0 +1,105 @@
+name: Bug 反馈
+description: 报告一个可以复现的问题
+title: '[Bug] '
+labels: ['类型: Bug', '状态: 待确认']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量把信息填全，很多问题靠「版本 + 日志」就能直接定位。
+
+        > 安全问题请**不要**开 issue，见 [SECURITY.md](https://github.com/MimoKit/aster/blob/main/SECURITY.md)。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 发生了什么？期望是什么？
+      placeholder: |
+        发送 `as` 之后机器人没有回复，终端也没有报错。
+        期望能收到一条状态消息。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 尽量具体，能一步不差照着做
+      placeholder: |
+        1. `aster` 启动
+        2. 协议端连接到 ws://127.0.0.1:5310/onebot/v11/ws
+        3. 群里发送 `as`
+        4. 没有任何反应
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: 相关日志片段。把 `log.level` 调成 `debug` 能拿到更多信息
+      render: shell
+      placeholder: |
+        2026-09-17 15:17:37.241 INFO  [aster] Aster v0.1.0 启动中
+        2026-09-17 15:17:37.251 INFO  [onebot11] 已监听 ws://0.0.0.0:5310/...
+    validations:
+      required: false
+
+  - type: input
+    id: aster-version
+    attributes:
+      label: Aster 版本
+      description: 执行 `aster version` 的输出
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node 版本
+      description: 执行 `node -v` 的输出
+      placeholder: v22.11.0
+    validations:
+      required: true
+
+  - type: input
+    id: adapter
+    attributes:
+      label: 协议端
+      description: 用的哪个实现与版本
+      placeholder: LLBot 8.2.1 / NapCat 4.2.0 / Lagrange 1.10
+    validations:
+      required: false
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: 安装方式
+      options:
+        - npm 全局安装
+        - 从源码运行
+        - Docker
+        - 其他
+    validations:
+      required: false
+
+  - type: textarea
+    id: plugin
+    attributes:
+      label: 插件源码
+      description: 如果是自写插件的问题，把相关部分贴上来
+      render: typescript
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 已经搜索过现有 issue，没有重复
+          required: true
+        - label: 用的是最新版本
+          required: false

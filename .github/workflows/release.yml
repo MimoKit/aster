@@ -1,0 +1,75 @@
+# 发布：打 tag 后发布到 npm，并创建 GitHub Release
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 只打包不发布
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    name: 发布到 npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 校验版本与 tag 一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAG=${GITHUB_REF_NAME#v}
+          if [ "$PKG" != "$TAG" ]; then
+            echo "package.json 版本 $PKG 与 tag $TAG 不一致" >&2
+            exit 1
+          fi
+          echo "版本一致：$PKG"
+
+      - name: 类型检查与测试
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: 构建内核
+        run: npm run build
+
+      - name: 构建前端
+        run: |
+          npm --prefix webui ci
+          npm --prefix webui run build
+
+      - name: 打包预览
+        if: inputs.dry-run
+        run: npm pack --dry-run
+
+      - name: 发布
+        if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry-run
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 创建 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry-run
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false

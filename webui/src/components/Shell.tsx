@@ -4,23 +4,21 @@
  * 布局是结构化的响应式：窄屏收起侧栏，而不是把字号缩小。
  */
 
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   ChartLineUp,
   ChatsCircle,
   GearSix,
+  List,
   PlugsConnected,
   PuzzlePiece,
   Scroll,
   Storefront,
-  List,
   X,
 } from '@phosphor-icons/react';
-
-import { getToken, setToken } from '../lib/api';
+import { useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { api, getToken, setToken } from '../lib/api';
 import { useQuery } from '../lib/useQuery';
-import { api } from '../lib/api';
 import { Button, StatusDot } from './ui';
 
 interface NavEntry {
@@ -41,12 +39,6 @@ const NAV: NavEntry[] = [
 
 export function Shell() {
   const [navOpen, setNavOpen] = useState(false);
-  const location = useLocation();
-
-  // 路由变化时收起移动端抽屉
-  useEffect(() => {
-    setNavOpen(false);
-  }, [location.pathname]);
 
   return (
     <div className="flex min-h-[100dvh]">
@@ -63,7 +55,14 @@ export function Shell() {
 
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2.5 pb-4">
           {NAV.map((entry) => (
-            <NavLink key={entry.to} to={entry.to} end={entry.to === '/'} className="nav-item">
+            <NavLink
+              key={entry.to}
+              to={entry.to}
+              end={entry.to === '/'}
+              className="nav-item"
+              // 点了就收起抽屉，比用 effect 监听路由更直接
+              onClick={() => setNavOpen(false)}
+            >
               <entry.icon size={16} weight="regular" />
               {entry.label}
             </NavLink>
@@ -111,7 +110,7 @@ function Brand() {
 }
 
 function SidebarFooter() {
-  const { data } = useQuery(() => api.health(), []);
+  const { data } = useQuery(() => api.health());
   const online = Boolean(data);
 
   return (
@@ -194,6 +193,7 @@ function TokenButton() {
         className="field"
         style={{ width: 190 }}
         type="password"
+        // biome-ignore lint/a11y/noAutofocus: 用户主动点开这个浮层，焦点理所应当落在输入框
         autoFocus
         placeholder="粘贴访问令牌"
         value={draft}

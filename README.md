@@ -1,126 +1,177 @@
+<div align="center">
+
 # Aster
 
-用 Rust 编写的 Bot 框架。当前阶段聚焦 **OneBot v11 适配器**与**消息字段规范化**。
+**用 TypeScript 编写的 QQ 机器人框架**
+
+插件是普通的 `.ts` 文件，改完存盘立刻生效 —— 不编译、不重启
+
+[![CI](https://img.shields.io/github/actions/workflow/status/MimoKit/aster/ci.yml?branch=main&label=CI&logo=github)](https://github.com/MimoKit/aster/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/aster-bot?logo=npm&label=npm)](https://www.npmjs.com/package/aster-bot)
+[![Node](https://img.shields.io/node/v/aster-bot?logo=node.js&label=node)](https://nodejs.org)
+[![License](https://img.shields.io/github/license/MimoKit/aster?label=license)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](./tsconfig.json)
+
+[快速开始](#快速开始) · [插件开发](./docs/plugin.md) · [配置](./docs/config.md) · [部署](./docs/deploy.md) · [架构](./docs/architecture.md)
+
+</div>
+
+---
 
 ## 特性
 
-- **反向 WebSocket 服务端**：框架监听端口，协议端（Lagrange / NapCat / LLOneBot / go-cqhttp 等）主动连上来
-- **消息字段规范化**：CQ 码字符串与数组形态统一收敛为强类型 `Segment`
-- **事件规范化**：`message` / `notice` / `request` / `meta_event` 全部建模为强类型枚举
-- **ID 类型归一**：`123` 与 `"123"` 视为同一个 ID，字符串 ID（如频道 `g1-c1`）原样保留
-- **API 调用**：基于 `echo` 的请求-响应关联，带超时与连接断开清理
-- **鉴权**：支持 `Authorization: Bearer`、`?access_token=` 查询参数、IP 白名单
-- **插件系统**：命令词独立成词、优先级排序、四级权限、群聊/私聊范围控制
-- **WebUI**：TypeScript 编写的网页控制台（总览 / 连接 / 插件 / 市场 / 发送台 / 日志 / 配置）
-- **日志脱敏**：`base64://` 内容自动折叠，避免刷屏
+| | |
+|---|---|
+| **TypeScript 全栈** | 内核与插件同一门语言，`strict` 全开，配置与事件都有完整类型 |
+| **零编译插件** | 插件是普通 `.ts` 文件，运行时加载；存盘即生效，改一行不用等构建 |
+| **OneBot v11** | 反向 WebSocket 接入 Lagrange / NapCat / LLOneBot / go-cqhttp 等实现 |
+| **消息规范化** | CQ 码、标准数组、扁平数组三种形态归一成同一套结构 |
+| **WebUI** | 自带控制台：实时状态、事件流、日志、插件列表、配置编辑、消息测试台 |
+| **依赖极少** | 运行时只有 3 个依赖：`ws`、`jiti`、`smol-toml` |
 
 ## 快速开始
-
-### 方式一：npm（推荐）
 
 ```bash
 # 全局安装
 npm install -g aster-bot
 
-# 启动（前台运行，日志直接打在终端）
+# 启动（前台运行，Ctrl-C 退出）
 aster
-
-# 另开终端改配置
-aster config set onebot11.port 5310
 ```
 
-### 方式二：从源码
-
-```bash
-git clone https://github.com/MimoKit/aster.git
-cd aster
-cargo build --release
-./target/release/aster
-```
-
-启动后监听：
+终端会打印两个地址：
 
 ```text
-ws://0.0.0.0:5310/onebot/v11/ws
+协议端请连接：ws://127.0.0.1:5310/onebot/v11/ws
+控制台地址：  http://127.0.0.1:5311
 ```
 
-把协议端的「反向 WebSocket」地址填成上面这个即可。
+把第一个地址填进协议端的「反向 WebSocket」配置，连上后：
 
-> **关于端口**：`0531` / `531` 属于特权端口（< 1024），普通用户无法绑定。
-> 默认使用 **5310**；若确实需要 531，请执行
-> `sudo setcap 'cap_net_bind_service=+ep' target/release/aster` 或用 sudo 启动，
-> 并把 `config.toml` 里的 `port` 改成 531。
+```bash
+# 在群里发送
+as          # 查看运行状态
+as 详细     # 详细信息
+echo 你好   # 内置示例插件
+```
+
+> [!TIP]
+> 数据目录默认是当前目录。想在固定位置存放配置与插件，用 `aster --data ~/my-bot`，
+> 或设置环境变量 `ASTER_DATA`。
+
+## 写一个插件
+
+在数据目录下建 `plugins/hello.ts`：
+
+```ts
+import { definePlugin, seg } from 'aster-bot';
+
+export default definePlugin({
+  name: 'hello',
+  desc: '打个招呼',
+  rules: [
+    {
+      name: '打招呼',
+      command: 'hi', // 命令词独立成词：hi / hi 参数 都触发，hi_there 不触发
+      async handler(ctx) {
+        if (!ctx.args) {
+          return ctx.reply('用法：hi <名字>');
+        }
+        return ctx.reply([seg.at(ctx.userId), seg.text(` 你好，${ctx.args}！`)]);
+      },
+    },
+  ],
+});
+```
+
+**存盘即生效**，终端会打印：
+
+```text
+2026-09-17 15:21:03.412 INFO  [plugin] 插件已重载：2 → 3 个，共 3 条规则
+```
+
+群里发 `hi 世界`，机器人就会 @ 你并回复。完整 API 见 **[插件开发指南](./docs/plugin.md)**。
+
+## 内置插件
+
+| 命令 | 作用 |
+|------|------|
+| `as` | 简要运行状态 |
+| `as 详细` | 详细信息（事件统计、账号列表、监听地址） |
+| `as 帮助` | 命令列表 |
+| `echo <内容>` | 复读；`echo 我的名片` 看发送者信息，`echo 图片` 演示消息段 |
+
+不想用内置插件：
+
+```toml
+[bot]
+builtin_plugins = false
+```
 
 ## WebUI
 
-TypeScript 编写的网页控制台，随框架一起启动。
-
-```bash
-aster                 # 启动后访问 http://127.0.0.1:5311
-```
+`aster` 启动后访问 <http://127.0.0.1:5311>。
 
 | 页面 | 内容 |
 |------|------|
-| 总览 | 运行时长、事件统计、在线账号、实时事件流 |
-| 连接 | 账号详情、反向 WebSocket 接入地址 |
-| 插件 | 已加载插件与其规则、权限、作用范围 |
-| 插件市场 | 浏览 [xlinxt/aster-plugins](https://github.com/xlinxt/aster-plugins) 上的插件 |
-| 发送台 | 直接调 API 发消息，用于接入调试 |
-| 日志 | 级别筛选、实时跟踪、手动暂停滚动 |
-| 配置 | schema 驱动的表单，点路径局部保存 |
+| **总览** | 运行时长、事件统计、在线账号、实时事件流 |
+| **连接** | 账号详情、接入地址一键复制 |
+| **插件** | 已加载插件、规则、权限、作用范围，支持手动重载 |
+| **插件市场** | 浏览 [xlinxt/aster-plugins](https://github.com/xlinxt/aster-plugins) 上的插件 |
+| **发送台** | 直接调 API 发消息，接入调试用 |
+| **日志** | 级别筛选、实时跟踪、滚动到底自动恢复跟随 |
+| **配置** | 表单化编辑，改动按点路径写回 |
 
-配置：
+> [!WARNING]
+> WebUI 的权限**等同于机器人本身**：能以任意账号发消息、改配置、看日志。
+> 默认只监听 `127.0.0.1`。需要远程访问时优先用 SSH 隧道，详见 [安全策略](./SECURITY.md)。
+
+## 配置
+
+`aster init` 会在数据目录生成带注释的 `config.toml`：
 
 ```toml
+[bot]
+name = "Aster"
+masters = []              # 主人账号，拥有所有插件权限
+command_prefix = ""       # 留空则命令直接以命令词开头（如 as）
+
+[log]
+level = "info"            # trace | debug | info | warn | error | silent
+
+[onebot11]
+host = "0.0.0.0"
+port = 5310
+path = "/onebot/v11/ws"
+access_token = ""         # 对外暴露时务必设置
+
 [webui]
-enable = true
 host = "127.0.0.1"
 port = 5311
-access_token = ""      # 非空则需在页面右上角填入；对外暴露时必须设置
-log_capacity = 2000    # 内存中保留的日志条数
+access_token = ""
+
+[plugin]
+dir = "plugins"
+hot_reload = true
 ```
 
-前端源码在 `webui/`，自行修改后重新构建：
+也可以用命令行改：
 
 ```bash
-cd webui
-npm install
-npm run build      # 产物输出到 webui/dist，由 Rust 侧托管
-npm run dev        # 开发模式，热更新（API 自动代理到 5311）
+aster config                                  # 查看全部
+aster config get onebot11.port                # 读单项
+aster config set onebot11.port 5312           # 改单项
+aster config set bot.masters '["123456"]'     # 数组
 ```
 
-## 命令行
+完整字段说明见 **[配置参考](./docs/config.md)**。
 
-npm 安装后提供 `aster` 命令。**默认就是前台启动**，日志直接打在终端：
+## 后台常驻
 
-```bash
-aster                 # 启动（等同于 aster start）
-aster config          # 查看全部配置
-aster config get onebot11.port
-aster config set onebot11.port 5310
-aster init            # 只生成配置，不启动
-aster build           # 只编译 Rust 可执行文件
-aster --help
-```
+Aster 只做前台启动，不做进程守护（不写 PID 文件、不后台化）。需要常驻请自行托管：
 
-常用选项：`--home <目录>` 指定数据目录，`--port <端口>` 临时覆盖端口。
-
-### 数据目录
-
-默认是当前目录下的 `./aster-data`，可用 `ASTER_HOME` 或 `--home` 指定：
-
-```text
-aster-data/
-└── config.toml      运行配置
-```
-
-框架只维护这一个文件；日志不落盘，前台直启时日志就在终端里。
-
-### 后台常驻
-
-Aster 本身**不做进程守护**（不写 PID 文件、不后台化），需要常驻请自行托管：
-
-**systemd**（推荐）
+<details>
+<summary><b>systemd</b>（推荐）</summary>
 
 ```ini
 # ~/.config/systemd/user/aster.service
@@ -129,7 +180,7 @@ Description=Aster Bot
 After=network.target
 
 [Service]
-WorkingDirectory=%h/bot/Aster
+WorkingDirectory=%h/my-bot
 ExecStart=%h/.local/bin/aster
 Restart=always
 RestartSec=5
@@ -141,351 +192,119 @@ WantedBy=default.target
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now aster
-journalctl --user -u aster -f      # 看日志
+journalctl --user -u aster -f
 ```
 
-**screen**
+</details>
+
+<details>
+<summary><b>screen / tmux</b></summary>
 
 ```bash
-screen -S aster -d -m aster
-screen -r aster                     # 回到会话，Ctrl-A D 脱离
-```
-
-**tmux**
-
-```bash
+screen -S aster -d -m aster      # 脱离，Ctrl-A D 返回
 tmux new -d -s aster aster
-tmux attach -t aster
 ```
 
-**nohup**
+</details>
+
+<details>
+<summary><b>nohup</b></summary>
 
 ```bash
 nohup aster > aster.log 2>&1 &
 tail -f aster.log
 ```
 
-## 没有协议端时如何自测
+</details>
 
-内置了一个模拟协议端：
+更多部署方式（Docker、反向代理、跨机部署）见 **[部署指南](./docs/deploy.md)**。
 
-```bash
-# 终端 1：启动框架
-aster
+## 文档
 
-# 终端 2：连接并上报一批样例事件
-cargo run --release --example mock_adapter
-```
+| 文档 | 内容 |
+|------|------|
+| [快速开始](./docs/getting-started.md) | 安装、接入协议端、第一个插件 |
+| [插件开发](./docs/plugin.md) | 规则匹配、上下文 API、权限、热重载、调试技巧 |
+| [配置参考](./docs/config.md) | 全部配置项、环境变量、配置优先级 |
+| [部署指南](./docs/deploy.md) | systemd、Docker、反向代理、跨机部署 |
+| [架构说明](./docs/architecture.md) | 事件从协议端到插件的完整路径、目录职责 |
+| [贡献指南](./CONTRIBUTING.md) | 本地开发、代码约定、提 PR |
+| [安全策略](./SECURITY.md) | 漏洞报告、部署安全要点 |
 
-终端 1 会直接打印框架处理结果。
-
-## 配置
-
-`config.toml`（首次运行从 `config/default.toml` 复制，位于数据目录下）：
-
-```toml
-[bot]
-name = "Aster"
-
-[log]
-level = "info"          # trace | debug | info | warn | error | off
-max_len = 4096          # 单条日志字符串上限
-show_base64 = false     # 是否打印完整 base64
-
-[onebot11]
-enable = true
-host = "0.0.0.0"
-port = 5310
-path = "/onebot/v11/ws"
-access_token = ""       # 空表示不校验
-trusted_ips = []        # 空表示不限制
-heartbeat_timeout = 90  # 秒
-handshake_timeout = 10
-request_timeout = 60
-```
-
-环境变量可覆盖：`ASTER_HOST`、`ASTER_PORT`、`ASTER_TOKEN`、`ASTER_LOG`。
-
-## 代码结构
+## 项目结构
 
 ```text
 src/
-├── main.rs              程序入口：配置 → 日志 → 注册插件 → 启动适配器 → 分发事件
-├── lib.rs               库入口与文档
-├── config.rs            配置加载与校验
-├── logging.rs           日志初始化与 base64 脱敏
-├── stats.rs             运行时统计（事件计数、运行时长）
-├── message/             ★ 消息字段规范化
-│   ├── segment.rs       消息段枚举（Segment）+ CQ 转义
-│   ├── cq.rs            CQ 码字符串 → 消息段
-│   ├── parser.rs        message 字段（字符串/数组）→ 消息段
-│   ├── text.rs          消息段 → raw_message / 可读文本
-│   └── mod.rs           MessageContent：上层统一入口
-├── event/               ★ 事件规范化
-│   ├── common.rs        Id / Sender / Anonymous / FileInfo / 取值辅助
-│   └── mod.rs           Event / MessageEvent / NoticeEvent / RequestEvent / MetaEvent
-├── plugin/              ★ 插件系统
-│   ├── rule.rs          规则：匹配方式 / 权限 / 范围
-│   ├── builtin.rs       内置插件（as 状态查询）
-│   └── mod.rs           Plugin / PluginContext / PluginRegistry
-├── webui/               ★ 网页控制台
-│   ├── api.rs           HTTP API + 前端托管
-│   └── mod.rs           构建产物目录定位
-├── logbuf.rs            内存日志环形缓冲（供 WebUI 与 SSE）
-├── app.rs               应用装配：配置 → 插件 → 适配器 → 分发
-└── onebot11/            OneBot v11 适配器
-    ├── action.rs        action-echo 调用（ApiCaller）+ 常用 API 封装
-    ├── connection.rs    连接生命周期、Bot 注册表、EventBus
-    └── mod.rs           WS 服务端、握手鉴权、accept 循环
+├── message.ts      消息段与 CQ 码：三种输入形态归一
+├── event.ts        事件归一化：字段类型差异的容忍层
+├── onebot11.ts     适配器：WS 服务端、echo 调用、账号注册表
+├── plugin.ts       插件 API：definePlugin 与定义校验
+├── plugin-host.ts  插件宿主：加载、匹配、分发、热重载
+├── config.ts       配置：TOML 读写、校验、点路径访问
+├── logger.ts       日志：终端输出 + 内存环形缓冲
+├── webui.ts        HTTP API、SSE、前端托管
+├── app.ts          装配：把上面这些拼成可启动的整体
+└── cli.ts          命令行
+plugins/            内置插件（和第三方插件走同一套 API）
+webui/              前端（React + Vite + Tailwind）
+docs/               文档
 ```
-
-## 插件系统
-
-### 内置插件：`as` 状态查询
-
-命令词独立成词，**不需要 `#` 之类的符号**（语义同 GsCore 的 `on_command`）：
-
-| 发送内容 | 效果 |
-|---------|------|
-| `as` | 简要运行状态 |
-| `as 详细` / `as detail` | 详细信息（事件统计、启动时间、主人配置） |
-| `as 帮助` / `as help` | 命令列表 |
-
-`asd`、`asdf 详细`、`xas` 都**不会**误触发。
-
-实际回复示例：
-
-```text
-【Aster 运行状态】
-机器人：弥灵（3853125761）
-版本：v0.0.1
-运行：1小时2分3秒
-已处理事件：1234 条
-插件：1 个
-```
-
-### 命令前缀可配置
-
-默认不需要前缀。若想改成 `#as` 风格：
-
-```toml
-[bot]
-command_prefix = "#"     # 之后命令变成 #as、#as 详细
-```
-
-### 写一个插件
-
-```rust
-use aster::plugin::{Handled, Permission, Plugin, Rule, Scope};
-
-let plugin = Plugin::builder("hello")
-    .desc("打招呼")
-    .priority(100)                    // 数字越小越先执行
-    .rule(
-        Rule::command("hi")           // 命令词独立成词
-            .name("打招呼")
-            .permission(Permission::All)
-            .scope(Scope::Any)        // Any / Group / Private
-            .handler(|ctx| async move {
-                let name = ctx.event.display_name();
-                let args = ctx.args();          // 命令词之后的参数
-                ctx.reply(format!("你好，{name}！参数：{args}")).await?;
-                Ok(Handled::Stop)               // Stop 停止后续规则；Continue 继续
-            }),
-    )
-    .build();
-
-registry.register(plugin);
-```
-
-### 匹配方式
-
-| 构造 | 语义 | 示例 |
-|------|------|------|
-| `Rule::command("as")` | 命令词独立成词，后接参数可选 | `as`、`as 详细` ✅；`asd` ❌ |
-| `Rule::prefix("#as")` | 只要以该串开头就命中 | `#as`、`#asd` ✅ |
-| `Rule::exact("状态")` | 整条消息完全相等 | `状态` ✅；`状态啊` ❌ |
-| `Rule::regex(r"^echo\s+(.+)$")` | 正则匹配，捕获组作为参数 | `echo 你好` ✅ |
-| `Rule::contains("状态")` | 包含子串 | `看看状态` ✅ |
-| `Rule::any()` | 匹配所有消息 | 慎用 |
-
-### 权限与范围
-
-权限四档：`Permission::All`（所有人）、`Master`（主人）、`Admin`（群管理+群主+主人）、`Owner`（群主+主人）。
-主人账号在 `config.toml` 里配置：
-
-```toml
-[bot]
-masters = ["3853125761"]
-```
-
-主人**始终放行**，即使规则要求群主权限。
-
-范围三档：`Scope::Any`（群聊+私聊）、`Group`（仅群聊）、`Private`（仅私聊）。
-
-### 处理函数返回值
-
-- `Ok(Handled::Stop)` —— 已处理，停止匹配后续规则（默认）
-- `Ok(Handled::Continue)` —— 已处理，但允许后续规则继续（用于旁路监听）
-- `Err(e)` —— 记录错误日志，继续尝试后续规则
-
-## 消息字段规范化
-
-### 1. 两种输入形态归一
-
-OneBot v11 的 `message` 字段既可能是 CQ 码字符串，也可能是数组，且数组内还分
-「标准写法」与「扁平写法」：
-
-```jsonc
-// CQ 码字符串
-"你好[CQ:at,qq=123][CQ:image,file=a.jpg]"
-
-// 标准数组
-[{"type": "text", "data": {"text": "你好"}}, {"type": "at", "data": {"qq": "123"}}]
-
-// 扁平写法（部分协议端）
-[{"type": "at", "qq": "123"}]
-```
-
-三者都会归一为同一结果：
-
-```rust
-vec![
-    Segment::Text { text: "你好".into() },
-    Segment::At { qq: "123".into() },
-    Segment::Image { file: "a.jpg".into(), .. },
-]
-```
-
-### 2. `MessageContent` 一次给全三种形态
-
-```rust
-pub struct MessageContent {
-    pub segments: Vec<Segment>,  // 结构化，业务逻辑用这个
-    pub raw: String,             // OneBot 语义的 CQ 码原文
-    pub text: String,            // 人类可读："你好@123[图片]"
-}
-```
-
-常用辅助方法：
-
-| 方法 | 作用 |
-|------|------|
-| `is_plain_text()` | 是否纯文本（决定要不要走命令匹配） |
-| `trimmed_leading_text()` | 开头的纯文本，命令解析用 |
-| `starts_with(prefix)` | 是否以某前缀开头 |
-| `contains_at(qq)` / `contains_at_all()` | @ 检测 |
-| `contains_image()` | 图片检测 |
-| `reply_id()` | 引用的消息 id |
-| `at_list()` | 所有 @ 目标 |
-| `to_array()` / `to_cq_string()` | 反向序列化 |
-
-### 3. ID 归一
-
-```rust
-assert_eq!(Id::parse("123"), Id::Num(123));   // 数字字符串 → 数字
-assert_eq!(Id::parse("g1-c1"), Id::Str("g1-c1".into()));  // 频道 ID 原样保留
-```
-
-### 4. 事件类型对应关系
-
-| OneBot v11 | `Event` 变体 | `event_name()` |
-|------------|--------------|----------------|
-| `message` / `private` / `friend` | `Event::Message` | `message.private.friend` |
-| `message` / `group` / `normal` | `Event::Message` | `message.group.normal` |
-| `message_sent` | `Event::MessageSent` | `message.group.normal` |
-| `notice` / `group_recall` | `Event::Notice` | `notice.group_recall` |
-| `notice` / `notify` / `poke` | `Event::Notice` | `notice.notify.poke` |
-| `request` / `group` / `invite` | `Event::Request` | `request.group.invite` |
-| `meta_event` / `lifecycle` | `Event::Meta` | `meta_event.lifecycle.connect` |
-
-未识别的类型一律落到 `Unknown` 变体，**不静默丢弃**，原始 JSON 保存在 `Event::raw()`。
-
-## 消费事件
-
-```rust
-use std::sync::Arc;
-use aster::event::Event;
-use aster::onebot11::connection::EventBus;
-
-let (bus, mut events) = EventBus::new(1024);
-tokio::spawn(async move {
-    while let Some(event) = events.recv().await {
-        match &*event {
-            Event::Message(msg) if msg.is_at_self() => {
-                println!("{} 在 {} 里 @ 了机器人", msg.display_name(), msg.session_id());
-            }
-            Event::Notice(notice) => println!("通知：{}", notice.notice_type()),
-            _ => {}
-        }
-    }
-});
-```
-
-## 主动调用 API
-
-```rust
-// 通过 BotRegistry 拿到账号
-if let Some(bot) = bots.get(&10001.into()).await {
-    // 发文本
-    bot.send_group_msg("30003", serde_json::json!("你好")).await?;
-    // 发结构化消息
-    bot.send_content(&event, &content).await?;
-    // 撤回
-    bot.delete_msg("1234").await?;
-    // 任意 API
-    bot.api.call("get_group_list", serde_json::json!({})).await?;
-}
-```
-
-## 测试
-
-```bash
-cargo test                      # Rust：150 个单元 + 9 个端到端 + 2 个文档测试
-cd webui && npm run build       # 前端：TypeScript 类型检查 + Vite 构建
-cargo test --test e2e_onebot11  # 仅端到端（真实 WebSocket 连接）
-node --test test/               # Node：37 个测试（配置、进程管理、参数解析）
-```
-
-Rust 侧端到端测试覆盖：群/私聊消息规范化、通知与请求事件、API 调用与 `echo` 回执、
-Token 鉴权（查询参数 + Bearer 头）、路径校验、未知事件容错、`message_sent`。
 
 ## 常见问题
 
-**`aster start` 提示需要 cargo？**
-npm 包里不含预编译二进制时会用 `cargo` 就地编译（约 1 分钟，仅首次）。
-安装 Rust 即可：https://rustup.rs 。若已有编译好的二进制，
-可用 `ASTER_BINARY=/path/to/aster` 指定。
+<details>
+<summary><b>端口被占用怎么办？</b></summary>
 
-**端口被占用？**
 ```bash
-aster config set onebot11.port 5311
-# 改完重启进程即可（前台运行时 Ctrl-C 后再启动）
+ss -ltnp | grep 5310        # 看谁占着
+aster config set onebot11.port 5312
 ```
 
-**想看收发的原始报文？**
-```bash
-aster config set log.level debug
-# 重启后日志会打印每一帧原始 JSON（base64 自动折叠）
+启动时会明确报错并给出提示，不会静默挂起。
+
+</details>
+
+<details>
+<summary><b>协议端连不上？</b></summary>
+
+按顺序检查：
+
+1. `ss -ltn | grep 5310` 确认端口在监听
+2. 协议端填的路径要和 `onebot11.path` 完全一致（默认 `/onebot/v11/ws`）
+3. 若设置了 `access_token`，协议端也要填同样的值
+4. 跨机器部署时 `host` 要改成 `0.0.0.0`，并放行防火墙端口
+5. 打开 `log.level = "debug"` 看握手阶段的日志
+
+</details>
+
+<details>
+<summary><b>插件改了没生效？</b></summary>
+
+- 文件名不能以 `_` 或 `.` 开头（会被当作草稿跳过）
+- 确认 `plugin.hot_reload = true`
+- 语法错误会打印在终端，加载失败不会影响其他插件
+- 也可以在 WebUI 的「插件」页点手动重载
+
+</details>
+
+<details>
+<summary><b>为什么命令前面不用加 <code>#</code>？</b></summary>
+
+命令词本身就是触发词，`as` 直接发就行。想恢复 `#as` 风格：
+
+```toml
+[bot]
+command_prefix = "#"
 ```
 
-**数据目录在哪？**
-```bash
-aster config path    # 打印配置文件路径
-```
+</details>
 
-## 后续计划
+## 相关项目
 
-- [x] 插件系统（命令匹配、优先级、权限、范围）
-- [x] WebUI（TypeScript + HTTP API）
-- [x] 插件市场（清单仓库 + 模板）
-- [ ] 插件运行时加载（当前为编译期）
-- [ ] 命令冷却与限流
-- [ ] 正向 WebSocket（框架主动连协议端）与 HTTP POST 上报
-- [ ] 其他适配器（Satori / Milky / GsCore）
-- [ ] 群成员与好友缓存
-- [ ] 消息发送频控与重试
+- [OneBot v11 标准](https://github.com/botuniverse/onebot-11) —— 协议规范
+- [xlinxt/aster-plugins](https://github.com/xlinxt/aster-plugins) —— 插件市场
+- [Yunzai](https://github.com/TimeRainStarSky/Yunzai) / [Karin](https://github.com/KarinJS/Karin) / [NoneBot2](https://github.com/nonebot/nonebot2) —— 同类框架，本项目的插件模型参考了它们的设计
 
 ## License
 
-MIT
+[MIT](./LICENSE)

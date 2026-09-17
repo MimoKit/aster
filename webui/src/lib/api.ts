@@ -110,8 +110,7 @@ export const api = {
   bots: () => request<{ bots: BotDetail[] }>('/bots'),
 
   /** 插件列表 */
-  plugins: () =>
-    request<{ plugins: PluginInfo[]; count: number; rules: number }>('/plugins'),
+  plugins: () => request<{ plugins: PluginInfo[]; count: number; rules: number }>('/plugins'),
 
   /** 完整配置 */
   config: () => request<ConfigResponse>('/config'),

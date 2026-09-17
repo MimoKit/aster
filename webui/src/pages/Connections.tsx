@@ -4,18 +4,27 @@
 
 import { Copy, Plugs } from '@phosphor-icons/react';
 import { useState } from 'react';
-
+import { Badge, Button, Card, Empty, ErrorState, StatusDot, TableSkeleton } from '../components/ui';
 import { api } from '../lib/api';
 import { copyText, formatDuration, formatNumber } from '../lib/format';
 import { useQueryPolling } from '../lib/useQuery';
-import { Badge, Button, Card, Empty, ErrorState, StatusDot, TableSkeleton } from '../components/ui';
 
 export function ConnectionsPage() {
-  const { data, loading, error, reload } = useQueryPolling(() => api.bots(), 4000, []);
-  const { data: overview } = useQueryPolling(() => api.overview(), 8000, []);
+  const { data, loading, error, reload } = useQueryPolling(() => api.bots(), 4000);
+  const { data: overview } = useQueryPolling(() => api.overview(), 8000);
 
-  if (loading && !data) return <Card noPadding><TableSkeleton rows={2} cols={4} /></Card>;
-  if (error && !data) return <Card><ErrorState message={error} onRetry={reload} /></Card>;
+  if (loading && !data)
+    return (
+      <Card noPadding>
+        <TableSkeleton rows={2} cols={4} />
+      </Card>
+    );
+  if (error && !data)
+    return (
+      <Card>
+        <ErrorState message={error} onRetry={reload} />
+      </Card>
+    );
 
   const bots = data?.bots ?? [];
   const onebot = overview?.onebot11;
@@ -47,7 +56,7 @@ export function ConnectionsPage() {
               </thead>
               <tbody>
                 {bots.map((bot) => (
-                  <tr key={bot.self_id}>
+                  <tr key={bot.selfId}>
                     <td>
                       <div className="flex items-center gap-2.5">
                         {bot.avatar ? (
@@ -62,15 +71,21 @@ export function ConnectionsPage() {
                         ) : (
                           <span
                             className="grid h-[26px] w-[26px] flex-none place-items-center rounded-full text-[11px] font-medium"
-                            style={{ background: 'var(--color-panel)', color: 'var(--color-ink-faint)' }}
+                            style={{
+                              background: 'var(--color-panel)',
+                              color: 'var(--color-ink-faint)',
+                            }}
                           >
                             ?
                           </span>
                         )}
                         <div className="min-w-0">
                           <p className="truncate font-medium">{bot.nickname ?? '未获取昵称'}</p>
-                          <p className="tnum text-[11px]" style={{ color: 'var(--color-ink-faint)' }}>
-                            {bot.uin ?? bot.self_id}
+                          <p
+                            className="tnum text-[11px]"
+                            style={{ color: 'var(--color-ink-faint)' }}
+                          >
+                            {bot.uin ?? bot.selfId}
                           </p>
                         </div>
                       </div>
@@ -82,7 +97,7 @@ export function ConnectionsPage() {
                       </span>
                     </td>
                     <td className="tnum">{formatNumber(bot.connections)}</td>
-                    <td className="tnum">{formatDuration(bot.connected_secs)}</td>
+                    <td className="tnum">{formatDuration(bot.connectedSecs)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -118,11 +133,7 @@ function EndpointCard({ url, auth }: { url: string; auth: boolean }) {
         >
           {url}
         </code>
-        <Button
-          size="sm"
-          icon={<Copy size={13} />}
-          onClick={handleCopy}
-        >
+        <Button size="sm" icon={<Copy size={13} />} onClick={handleCopy}>
           {copied ? '已复制' : '复制'}
         </Button>
       </div>

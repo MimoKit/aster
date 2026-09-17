@@ -1,37 +1,57 @@
 {
   "name": "aster-bot",
-  "version": "0.0.5",
-  "description": "Aster —— 用 Rust 编写的 Bot 框架（OneBot v11），由 Node.js 提供命令行管理",
+  "version": "0.1.0",
+  "description": "Aster —— 用 TypeScript 编写的 Bot 框架（OneBot v11）",
   "type": "module",
+  "license": "MIT",
   "bin": {
     "aster": "bin/aster.js"
   },
   "exports": {
-    ".": "./lib/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "files": [
     "bin",
-    "lib",
-    "src",
-    "config/default.toml",
-    "Cargo.toml",
-    "Cargo.lock",
+    "dist",
+    "plugins",
     "webui/dist",
+    "docs",
     "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
     "LICENSE"
   ],
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20.11"
   },
   "scripts": {
-    "test": "node --test test/",
-    "test:rust": "cargo test",
-    "build": "cargo build --release",
-    "prepack": "node scripts/prepack.js",
-    "start": "node bin/aster.js start"
+    "start": "node src/cli.ts",
+    "dev": "node --watch src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "webui": "npm --prefix webui run build",
+    "prepublishOnly": "npm run build && npm run webui"
   },
   "dependencies": {
-    "smol-toml": "^1.4.2"
+    "jiti": "^2.4.2",
+    "smol-toml": "^1.4.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.5",
+    "@types/node": "^24.9.1",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.9.3"
   },
   "keywords": [
     "bot",
@@ -39,10 +59,9 @@
     "onebot",
     "onebot11",
     "chatbot",
-    "rust",
-    "framework"
+    "framework",
+    "typescript"
   ],
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MimoKit/aster.git"

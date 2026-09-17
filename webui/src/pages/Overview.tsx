@@ -2,20 +2,24 @@
  * 总览页：运行状态、事件统计、在线账号、实时事件流。
  */
 
-import { useEffect, useRef, useState } from 'react';
 import { Broadcast, Plugs, PuzzlePiece, Timer } from '@phosphor-icons/react';
-
-import { api, subscribe } from '../lib/api';
-import type { LiveEvent } from '../lib/types';
-import { formatNumber } from '../lib/format';
-import { useQueryPolling } from '../lib/useQuery';
+import { useEffect, useRef, useState } from 'react';
 import { Badge, Card, ErrorState, Metric, Skeleton, StatusDot } from '../components/ui';
+import { api, subscribe } from '../lib/api';
+import { formatNumber } from '../lib/format';
+import type { LiveEvent } from '../lib/types';
+import { useQueryPolling } from '../lib/useQuery';
 
 export function OverviewPage() {
-  const { data, loading, error, reload } = useQueryPolling(() => api.overview(), 5000, []);
+  const { data, loading, error, reload } = useQueryPolling(() => api.overview(), 5000);
 
   if (loading && !data) return <OverviewSkeleton />;
-  if (error && !data) return <Card><ErrorState message={error} onRetry={reload} /></Card>;
+  if (error && !data)
+    return (
+      <Card>
+        <ErrorState message={error} onRetry={reload} />
+      </Card>
+    );
   if (!data) return null;
 
   const { bot, stats, plugins, onebot11, bots } = data;
@@ -67,7 +71,7 @@ export function OverviewPage() {
               <Metric label="消息" value={formatNumber(stats.messages)} />
               <Metric label="通知" value={formatNumber(stats.notices)} />
               <Metric label="请求" value={formatNumber(stats.requests)} />
-              <Metric label="元事件" value={formatNumber(stats.meta_events)} />
+              <Metric label="元事件" value={formatNumber(stats.metaEvents)} />
               <Metric label="命令命中" value={formatNumber(stats.commands)} />
             </div>
           </Card>
@@ -79,7 +83,7 @@ export function OverviewPage() {
           <Card title="运行信息">
             <dl className="flex flex-col gap-3 text-[13px]">
               <Row label="版本" value={`v${bot.version}`} mono />
-              <Row label="启动时间" value={bot.started_at} mono />
+              <Row label="启动时间" value={bot.startedAt} mono />
               <Row
                 label="插件"
                 value={`${plugins.count} 个 / ${plugins.rules} 条规则`}
@@ -87,7 +91,7 @@ export function OverviewPage() {
               />
               <Row
                 label="日志缓冲"
-                value={`${formatNumber(data.log_count)} 条`}
+                value={`${formatNumber(data.logCount)} 条`}
                 icon={<Timer size={13} />}
               />
             </dl>
@@ -110,7 +114,7 @@ export function OverviewPage() {
             ) : (
               <ul className="flex flex-col gap-2.5">
                 {bots.map((botItem) => (
-                  <li key={botItem.self_id} className="flex items-center gap-2.5">
+                  <li key={botItem.selfId} className="flex items-center gap-2.5">
                     <StatusDot tone={botItem.online ? 'ok' : 'muted'} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-medium">
@@ -120,7 +124,7 @@ export function OverviewPage() {
                         className="tnum truncate text-[11px]"
                         style={{ color: 'var(--color-ink-faint)' }}
                       >
-                        {botItem.self_id}
+                        {botItem.selfId}
                       </p>
                     </div>
                     {botItem.connections > 1 ? (
@@ -161,21 +165,20 @@ function Row({
 
 /** 实时事件流：只显示最近若干条，滚动不打扰用户 */
 function LiveEventPanel() {
-  const [events, setEvents] = useState<LiveEvent[]>([]);
+  // seq 由前端自增：同一条事件可能时间戳与名字都相同，需要稳定的 key
+  const [events, setEvents] = useState<(LiveEvent & { seq: number })[]>([]);
   const [connected, setConnected] = useState(false);
-  const seen = useRef(0);
+  const seq = useRef(0);
 
   useEffect(() => {
     const close = subscribe(
       '/events/stream',
       'event',
       (raw) => {
+        seq.current += 1;
+        const entry = { ...(raw as LiveEvent), seq: seq.current };
         // 环形保留最近 12 条
-        setEvents((prev) => {
-          const next = [raw as LiveEvent, ...prev];
-          return next.slice(0, 12);
-        });
-        seen.current += 1;
+        setEvents((prev) => [entry, ...prev].slice(0, 12));
       },
       () => setConnected(false),
     );
@@ -187,7 +190,10 @@ function LiveEventPanel() {
     <Card
       title="实时事件"
       actions={
-        <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--color-ink-faint)' }}>
+        <span
+          className="flex items-center gap-1.5 text-[11px]"
+          style={{ color: 'var(--color-ink-faint)' }}
+        >
           <Broadcast size={12} />
           {connected ? '监听中' : '未连接'}
         </span>
@@ -195,14 +201,17 @@ function LiveEventPanel() {
       noPadding
     >
       {events.length === 0 ? (
-        <p className="px-4 py-8 text-center text-[12px]" style={{ color: 'var(--color-ink-faint)' }}>
+        <p
+          className="px-4 py-8 text-center text-[12px]"
+          style={{ color: 'var(--color-ink-faint)' }}
+        >
           暂无事件。协议端上报后这里会实时显示。
         </p>
       ) : (
         <ul>
-          {events.map((event, index) => (
+          {events.map((event) => (
             <li
-              key={`${event.time}-${index}`}
+              key={event.seq}
               className="flex items-center gap-3 border-b px-4 py-2 last:border-b-0"
               style={{ borderColor: 'var(--color-line)' }}
             >
@@ -217,7 +226,7 @@ function LiveEventPanel() {
                 className="tnum ml-auto flex-none text-[11px]"
                 style={{ color: 'var(--color-ink-faint)' }}
               >
-                {event.self_id ?? '-'}
+                {event.selfId ?? '-'}
               </span>
             </li>
           ))}
@@ -226,6 +235,10 @@ function LiveEventPanel() {
     </Card>
   );
 }
+
+/** 骨架屏的稳定 key，避免用下标当 key */
+const SKELETON_METRICS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'];
+const SKELETON_ROWS = ['r1', 'r2', 'r3', 'r4'];
 
 function OverviewSkeleton() {
   return (
@@ -239,8 +252,8 @@ function OverviewSkeleton() {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card title="事件统计">
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2">
+            {SKELETON_METRICS.map((key) => (
+              <div key={key} className="flex flex-col gap-2">
                 <Skeleton width="50%" height={11} />
                 <Skeleton width="35%" height={20} />
               </div>
@@ -249,8 +262,8 @@ function OverviewSkeleton() {
         </Card>
         <Card title="运行信息">
           <div className="flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={13} />
+            {SKELETON_ROWS.map((key) => (
+              <Skeleton key={key} height={13} />
             ))}
           </div>
         </Card>

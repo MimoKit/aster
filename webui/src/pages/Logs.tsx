@@ -4,16 +4,17 @@
  * 实时流默认暂停自动滚动，用户手动滚到底部才恢复——避免正在读日志时被拽走。
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, Pause, Play, Trash } from '@phosphor-icons/react';
-
-import { api, subscribe } from '../lib/api';
-import type { LogEntry } from '../lib/types';
-import { LOG_LEVELS, formatClock, levelTone } from '../lib/format';
-import { useQuery } from '../lib/useQuery';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Card, ErrorState, Skeleton } from '../components/ui';
+import { api, subscribe } from '../lib/api';
+import { formatClock, LOG_LEVELS, levelTone } from '../lib/format';
+import type { LogEntry } from '../lib/types';
+import { useQuery } from '../lib/useQuery';
 
 const MAX_ROWS = 2000;
+/** 日志骨架屏的稳定 key */
+const LOG_SKELETON_ROWS = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8'];
 
 export function LogsPage() {
   const [level, setLevel] = useState<string>('all');
@@ -23,7 +24,7 @@ export function LogsPage() {
 
   const { data, loading, error, reload } = useQuery(
     () => api.logs({ limit: 500, level: level === 'all' ? undefined : level }),
-    [level],
+    level,
   );
 
   const scroller = useRef<HTMLDivElement>(null);
@@ -46,7 +47,8 @@ export function LogsPage() {
     });
   }, [follow]);
 
-  // 贴近底部时自动滚动
+  // 贴近底部时自动滚动（scroller 是 ref，引用稳定，无需进依赖）
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 同上
   useEffect(() => {
     const el = scroller.current;
     if (!el || !atBottom) return;
@@ -54,15 +56,13 @@ export function LogsPage() {
   }, [rows, atBottom]);
 
   // 切换级别时清空实时缓冲，避免混入其他级别
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 仅在 level 变化时重置
   useEffect(() => {
     setLive([]);
   }, [level]);
 
   const visible = useMemo(
-    () =>
-      level === 'all'
-        ? rows
-        : rows.filter((entry) => entry.level.toLowerCase() === level),
+    () => (level === 'all' ? rows : rows.filter((entry) => entry.level.toLowerCase() === level)),
     [rows, level],
   );
 
@@ -78,10 +78,9 @@ export function LogsPage() {
       <Card>
         <div className="flex flex-wrap items-center gap-2">
           {/* 级别筛选 */}
-          <div
+          <fieldset
             className="flex items-center gap-0.5 rounded-[6px] border p-0.5"
             style={{ borderColor: 'var(--color-line)', background: 'var(--color-canvas)' }}
-            role="group"
             aria-label="日志级别"
           >
             <LevelChip active={level === 'all'} onClick={() => setLevel('all')}>
@@ -92,7 +91,7 @@ export function LogsPage() {
                 {item}
               </LevelChip>
             ))}
-          </div>
+          </fieldset>
 
           <span className="text-[12px]" style={{ color: 'var(--color-ink-faint)' }}>
             {visible.length} 条
@@ -136,13 +135,9 @@ export function LogsPage() {
         </div>
 
         <div className="mt-2 flex items-center gap-2 text-[12px]">
-          <Badge tone={follow ? 'ok' : 'default'}>
-            {follow ? '实时接收中' : '实时已暂停'}
-          </Badge>
+          <Badge tone={follow ? 'ok' : 'default'}>{follow ? '实时接收中' : '实时已暂停'}</Badge>
           {!atBottom ? (
-            <span style={{ color: 'var(--color-ink-soft)' }}>
-              已向上滚动，自动跟随已暂停
-            </span>
+            <span style={{ color: 'var(--color-ink-soft)' }}>已向上滚动，自动跟随已暂停</span>
           ) : null}
         </div>
       </Card>
@@ -150,9 +145,9 @@ export function LogsPage() {
       <Card noPadding>
         {loading && !data ? (
           <div className="p-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="py-1.5">
-                <Skeleton width={`${45 + ((i * 13) % 45)}%`} height={12} />
+            {LOG_SKELETON_ROWS.map((key, index) => (
+              <div key={key} className="py-1.5">
+                <Skeleton width={`${45 + ((index * 13) % 45)}%`} height={12} />
               </div>
             ))}
           </div>

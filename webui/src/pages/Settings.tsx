@@ -5,19 +5,22 @@
  * 保存时只提交改动过的字段，避免整份配置读写冲突。
  */
 
-import { useEffect, useMemo, useState } from 'react';
 import { FloppyDisk, WarningCircle } from '@phosphor-icons/react';
-
+import { useEffect, useMemo, useState } from 'react';
+import { Badge, Button, Card, ErrorState, Field, Skeleton, Switch } from '../components/ui';
 import { api } from '../lib/api';
 import type { ConfigField } from '../lib/types';
 import { useQuery } from '../lib/useQuery';
-import { Badge, Button, Card, ErrorState, Field, Skeleton, Switch } from '../components/ui';
 
 type ConfigDoc = Record<string, unknown>;
 
+/** 骨架屏的稳定 key */
+const SETTINGS_SKELETON_GROUPS = ['g1', 'g2', 'g3'];
+const SETTINGS_SKELETON_FIELDS = ['f1', 'f2', 'f3', 'f4'];
+
 export function SettingsPage() {
-  const configQuery = useQuery(() => api.config(), []);
-  const schemaQuery = useQuery(() => api.configSchema(), []);
+  const configQuery = useQuery(() => api.config());
+  const schemaQuery = useQuery(() => api.configSchema());
 
   const [draft, setDraft] = useState<ConfigDoc | null>(null);
   const [dirty, setDirty] = useState<Set<string>>(new Set());
@@ -84,7 +87,9 @@ export function SettingsPage() {
         }
         cursor = cursor[part] as Record<string, unknown>;
       }
-      cursor[parts[parts.length - 1]!] = value;
+      const last = parts[parts.length - 1];
+      if (last === undefined) return prev;
+      cursor[last] = value;
       return next;
     });
     setDirty((prev) => new Set(prev).add(key));
@@ -215,11 +220,7 @@ function ConfigInput({
             {field.key}
           </p>
         </div>
-        <Switch
-          checked={Boolean(value)}
-          onChange={onChange}
-          label={field.label}
-        />
+        <Switch checked={Boolean(value)} onChange={onChange} label={field.label} />
       </div>
     );
   }
@@ -247,11 +248,7 @@ function ConfigInput({
   if (field.type === 'string[]') {
     const list = Array.isArray(value) ? (value as string[]) : [];
     return (
-      <Field
-        label={field.label}
-        hint={field.hint ?? '多个值用英文逗号分隔'}
-        htmlFor={id}
-      >
+      <Field label={field.label} hint={field.hint ?? '多个值用英文逗号分隔'} htmlFor={id}>
         <input
           id={id}
           className="field"
@@ -275,11 +272,7 @@ function ConfigInput({
     field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text';
 
   return (
-    <Field
-      label={field.label}
-      hint={field.hint ?? field.key}
-      htmlFor={id}
-    >
+    <Field label={field.label} hint={field.hint ?? field.key} htmlFor={id}>
       <input
         id={id}
         className="field tnum"
@@ -299,11 +292,11 @@ function ConfigInput({
 function SettingsSkeleton() {
   return (
     <div className="flex flex-col gap-4">
-      {Array.from({ length: 3 }).map((_, groupIndex) => (
-        <Card key={groupIndex} title="加载中">
+      {SETTINGS_SKELETON_GROUPS.map((groupKey) => (
+        <Card key={groupKey} title="加载中">
           <div className="grid gap-4 sm:grid-cols-2">
-            {Array.from({ length: 4 }).map((__, fieldIndex) => (
-              <div key={fieldIndex} className="flex flex-col gap-2">
+            {SETTINGS_SKELETON_FIELDS.map((fieldKey) => (
+              <div key={fieldKey} className="flex flex-col gap-2">
                 <Skeleton width="35%" height={11} />
                 <Skeleton height={32} radius={6} />
               </div>

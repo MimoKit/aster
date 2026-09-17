@@ -2,16 +2,11 @@
 /**
  * aster 命令行入口。
  *
- * 这个文件保持极薄：只负责调用 lib/cli.js 并把退出码传给系统。
+ * 优先加载构建产物（dist），开发场景下回落到 TS 源码
+ * （Node 22+ 原生支持直接运行 TypeScript）。
  */
 
-import { main } from '../lib/cli.js';
+const entry = await import('../dist/cli.js').catch(() => import('../src/cli.ts'));
 
-main()
-  .then((code) => {
-    process.exitCode = code;
-  })
-  .catch((err) => {
-    process.stderr.write(`错误：${err?.stack ?? err}\n`);
-    process.exitCode = 1;
-  });
+const code = await entry.main();
+process.exitCode = code;

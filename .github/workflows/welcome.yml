@@ -1,0 +1,37 @@
+# 首次贡献者欢迎语
+
+name: Welcome
+
+on:
+  pull_request_target:
+    types: [opened]
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            第一次在这里开 issue，欢迎 👋
+
+            为了让问题更快定位，麻烦尽量补充：**Aster 版本、Node 版本、协议端名称与版本**，
+            以及相关的日志片段（注意把 token 之类的敏感信息去掉）。
+
+            插件相关的问题，贴一下插件源码或报错栈会很有帮助。
+          pr-message: |
+            第一次提交 PR，感谢 👋
+
+            有几件事提一下：
+            - 提交前跑一下 `npm run typecheck && npm test && npm run lint`
+            - 新增功能请附上测试，改动行为请同步更新 `docs/`
+            - 提交信息用 `feat:` / `fix:` / `docs:` 这类前缀
+
+            我会尽快 review。

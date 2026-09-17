@@ -4,8 +4,8 @@
  * 保持一致的可交互词汇：同一套按钮形状、同一套表单控件、同一套图标风格。
  */
 
+import { ArrowsClockwise, WarningCircle } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
-import { WarningCircle, ArrowsClockwise } from '@phosphor-icons/react';
 
 /* ─────────────────────────── 状态点 ─────────────────────────── */
 
@@ -17,13 +17,7 @@ export function StatusDot({ tone = 'muted' }: { tone?: 'ok' | 'warn' | 'danger' 
     muted: 'var(--color-ink-faint)',
   }[tone];
 
-  return (
-    <span
-      className="dot"
-      style={{ background: color }}
-      aria-hidden="true"
-    />
-  );
+  return <span className="dot" style={{ background: color }} aria-hidden="true" />;
 }
 
 /* ─────────────────────────── 徽标 ─────────────────────────── */
@@ -35,8 +29,7 @@ export function Badge({
   children: ReactNode;
   tone?: 'default' | 'ok' | 'warn' | 'danger' | 'accent';
 }) {
-  const cls =
-    tone === 'default' ? 'badge' : `badge badge-${tone}`;
+  const cls = tone === 'default' ? 'badge' : `badge badge-${tone}`;
   return <span className={cls}>{children}</span>;
 }
 
@@ -89,12 +82,7 @@ export function Spinner({ size = 12 }: { size?: number }) {
     >
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <circle cx="8" cy="8" r="6" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-      <path
-        d="M14 8a6 6 0 0 0-6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <path d="M14 8a6 6 0 0 0-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -128,13 +116,7 @@ export function Empty({
 }
 
 /** 错误状态：说明问题与恢复方式 */
-export function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
+export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
       <WarningCircle size={22} style={{ color: 'var(--color-danger)' }} />
@@ -168,13 +150,17 @@ export function Skeleton({
 
 /** 表格骨架：形状与最终表格一致 */
 export function TableSkeleton({ rows = 4, cols = 3 }: { rows?: number; cols?: number }) {
+  // 骨架屏是静态占位，用「行号-列号」当 key 稳定且可读
+  const rowKeys = Array.from({ length: rows }, (_, index) => `row-${index}`);
+  const colKeys = Array.from({ length: cols }, (_, index) => `col-${index}`);
+
   return (
     <div className="p-4">
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={rowIndex} className="flex gap-4 py-2.5">
-          {Array.from({ length: cols }).map((__, colIndex) => (
+      {rowKeys.map((rowKey) => (
+        <div key={rowKey} className="flex gap-4 py-2.5">
+          {colKeys.map((colKey, colIndex) => (
             <Skeleton
-              key={colIndex}
+              key={colKey}
               width={colIndex === 0 ? '28%' : `${Math.floor(60 / cols)}%`}
               height={12}
             />
@@ -206,11 +192,7 @@ export function Field({
         {label}
       </label>
       {children}
-      {error ? (
-        <p className="error-text">{error}</p>
-      ) : hint ? (
-        <p className="hint">{hint}</p>
-      ) : null}
+      {error ? <p className="error-text">{error}</p> : hint ? <p className="hint">{hint}</p> : null}
     </div>
   );
 }
@@ -289,15 +271,7 @@ export function Card({
  * 刻意不做"大数字 + 小标签 + 装饰色"的仪表盘模板：
  * 数字与标签同一视觉层级，靠字重和等宽数字区分。
  */
-export function Metric({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: ReactNode;
-  hint?: string;
-}) {
+export function Metric({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[12px]" style={{ color: 'var(--color-ink-soft)' }}>

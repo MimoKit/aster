@@ -20,10 +20,11 @@ export interface QueryResult<T> {
 /**
  * 拉取数据。
  *
- * @param fetcher 取数函数；引用变化不会触发重新请求，用 deps 控制
- * @param deps    依赖项，变化时重新拉取
+ * @param fetcher 取数函数；引用变化不会触发重新请求，用 key 控制
+ * @param key     变化时重新拉取。传一个稳定的字符串而不是依赖数组，
+ *                这样既能精确控制触发时机，也不会让 lint 规则误判
  */
-export function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): QueryResult<T> {
+export function useQuery<T>(fetcher: () => Promise<T>, key = ''): QueryResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,10 +61,10 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): Qu
     }
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 重新拉取由调用方通过 key 控制，fetcher 用 ref 读取最新值
   useEffect(() => {
     void run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [key]);
 
   return { data, loading, error, unauthorized, reload: run };
 }
@@ -76,9 +77,9 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): Qu
 export function useQueryPolling<T>(
   fetcher: () => Promise<T>,
   intervalMs: number,
-  deps: unknown[] = [],
+  key = '',
 ): QueryResult<T> {
-  const result = useQuery(fetcher, deps);
+  const result = useQuery(fetcher, key);
 
   const runRef = useRef(result.reload);
   runRef.current = result.reload;

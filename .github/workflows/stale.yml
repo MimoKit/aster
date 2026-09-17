@@ -1,0 +1,42 @@
+# 无人跟进的 issue / PR 自动标记并关闭，保持列表干净
+
+name: Stale
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 每天北京时间 10:00
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # 30 天没动静先提醒，再过 14 天关闭
+          days-before-stale: 30
+          days-before-close: 14
+          stale-issue-label: '状态: 等待回复'
+          stale-pr-label: '状态: 等待回复'
+          stale-issue-message: |
+            这个 issue 已经 30 天没有新进展了，先标记为等待回复。
+
+            如果问题仍然存在，补充一下版本号、复现步骤和日志，我会继续跟进；
+            确认已解决的话直接关闭就好。
+          stale-pr-message: |
+            这个 PR 已经 30 天没有新进展了。
+
+            还需要继续的话回复一下即可，否则会在两周后关闭。
+          close-issue-message: '长时间没有回复，先关闭了。问题仍在的话欢迎重新开一个 issue。'
+          close-pr-message: '长时间没有进展，先关闭了。需要继续的话可以重新打开。'
+          # 明确标记为长期存在的 issue 不参与
+          exempt-issue-labels: '状态: 已确认,状态: 计划中'
+          exempt-pr-labels: '状态: 已确认'
+          exempt-all-milestones: true
+          # 机器人自己提的依赖更新别动
+          exempt-draft-pr: true
+          operations-per-run: 50

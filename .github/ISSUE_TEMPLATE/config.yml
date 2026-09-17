@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用问题 / 求助
+    url: https://github.com/MimoKit/aster/discussions
+    about: 装不上、连不上、插件不会写之类的，去 Discussions 更快
+  - name: 插件市场
+    url: https://github.com/xlinxt/aster-plugins
+    about: 找现成插件，或提交自己的插件
+  - name: 安全问题
+    url: https://github.com/MimoKit/aster/security/advisories/new
+    about: 漏洞请走私密渠道，不要开公开 issue

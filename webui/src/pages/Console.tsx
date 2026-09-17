@@ -4,15 +4,14 @@
  * 支持文本与 CQ 码两种输入；CQ 码会被后端按原样传给协议端。
  */
 
+import { CheckCircle, PaperPlaneRight, XCircle } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { PaperPlaneRight, CheckCircle, XCircle } from '@phosphor-icons/react';
-
+import { Badge, Button, Card, Field, StatusDot } from '../components/ui';
 import { api } from '../lib/api';
 import { useQuery } from '../lib/useQuery';
-import { Badge, Button, Card, Field, StatusDot } from '../components/ui';
 
 export function ConsolePage() {
-  const botsQuery = useQuery(() => api.bots(), []);
+  const botsQuery = useQuery(() => api.bots());
   const bots = botsQuery.data?.bots ?? [];
 
   const [target, setTarget] = useState<'group' | 'private'>('group');
@@ -35,7 +34,7 @@ export function ConsolePage() {
         target,
         id: id.trim(),
         message: message.trim(),
-        ...(selfId ? { self_id: selfId } : {}),
+        ...(selfId ? { selfId: selfId } : {}),
       });
       setResult({ ok: true, data: response.data });
     } catch (err) {
@@ -85,10 +84,7 @@ export function ConsolePage() {
                 </div>
               </Field>
 
-              <Field
-                label={target === 'group' ? '群号' : '用户号'}
-                htmlFor="send-id"
-              >
+              <Field label={target === 'group' ? '群号' : '用户号'} htmlFor="send-id">
                 <input
                   id="send-id"
                   className="field tnum"
@@ -125,8 +121,8 @@ export function ConsolePage() {
                 >
                   <option value="">自动选择</option>
                   {bots.map((bot) => (
-                    <option key={bot.self_id} value={bot.self_id}>
-                      {bot.nickname ?? '未命名'}（{bot.self_id}）
+                    <option key={bot.selfId} value={bot.selfId}>
+                      {bot.nickname ?? '未命名'}（{bot.selfId}）
                     </option>
                   ))}
                 </select>
@@ -164,16 +160,12 @@ export function ConsolePage() {
                   <XCircle size={15} style={{ color: 'var(--color-danger)', flex: 'none' }} />
                 )}
                 <div className="min-w-0">
-                  <p className="text-[12px] font-medium">
-                    {result.ok ? '发送成功' : '发送失败'}
-                  </p>
+                  <p className="text-[12px] font-medium">{result.ok ? '发送成功' : '发送失败'}</p>
                   <p
                     className="mono-block mt-0.5 break-all text-[11px]"
                     style={{ color: 'var(--color-ink-soft)' }}
                   >
-                    {result.ok
-                      ? JSON.stringify(result.data)
-                      : result.message}
+                    {result.ok ? JSON.stringify(result.data) : result.message}
                   </p>
                 </div>
               </div>
@@ -190,14 +182,14 @@ export function ConsolePage() {
         ) : (
           <ul className="flex flex-col gap-2.5">
             {bots.map((bot) => (
-              <li key={bot.self_id} className="flex items-center gap-2">
+              <li key={bot.selfId} className="flex items-center gap-2">
                 <StatusDot tone={bot.online ? 'ok' : 'muted'} />
                 <span className="truncate text-[13px]">{bot.nickname ?? '未命名'}</span>
                 <span
                   className="tnum ml-auto text-[11px]"
                   style={{ color: 'var(--color-ink-faint)' }}
                 >
-                  {bot.self_id}
+                  {bot.selfId}
                 </span>
               </li>
             ))}

@@ -1,28 +1,22 @@
-# Rust
-/target
-**/*.rs.bk
-
-# Node
+# 依赖
 node_modules/
-*.tgz
-npm-debug.log*
-webui/dist/
 
-# 运行期数据（配置含 token，不入库）
+# 构建产物（发布时由 package.json 的 files 白名单带入）
+/dist/
+/webui/dist/
+
+# 运行期数据（配置含 token，绝不入库）
 /config.toml
 /aster-data/
 *.pid
-
-# 日志
-/logs
 *.log
+/logs/
+
+# npm 打包产物
+*.tgz
 
 # 编辑器 / 系统
 .idea/
 .vscode/
 *.swp
 .DS_Store
-
-# WebUI
-webui/node_modules/
-webui/dist/
