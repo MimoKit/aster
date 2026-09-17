@@ -45,9 +45,7 @@ command_prefix = ""
 | `builtin_plugins` | bool | `true` | 是否加载内置的 `status` / `echo` 插件 |
 | `command_prefix` | string | `""` | 命令强制前缀。留空则命令直接以命令词开头 |
 
-> [!TIP]
-> `command_prefix = "#"` 会让规则里的 `command: 'as'` 变成必须发 `#as`。
-> 从别的框架迁移过来、习惯了 `#` 前缀的话可以开。
+`command_prefix = "#"` 会让规则里的 `command: 'as'` 变成必须发 `#as`。从别的框架迁移过来、习惯了 `#` 前缀的话可以开。
 
 ## `[log]`
 
@@ -72,9 +70,7 @@ color = true
 trace < debug < info < warn < error < silent
 ```
 
-> [!TIP]
-> 排查问题时用 `debug`，它会打印事件分发与插件匹配过程。
-> `trace` 会刷得很快，一般只在开发框架本身时用。
+排查问题时用 `debug`，它会打印事件分发与插件匹配过程。 `trace` 会刷得很快，一般只在开发框架本身时用。
 
 ## `[onebot11]`
 
@@ -115,14 +111,12 @@ Authorization: Bearer <token>
 ws://127.0.0.1:5310/onebot/v11/ws?access_token=<token>
 ```
 
-> [!WARNING]
-> `host = "0.0.0.0"` 且 `access_token = ""` 时，任何能访问该端口的人都能接入并伪装成你的机器人。
-> 机器有公网 IP 的话，**要么设 token，要么用 `trusted_ips` 限制来源**。
+**注意：** `host = "0.0.0.0"` 且 `access_token = ""` 时，任何能访问该端口的人都能接入并伪装成你的机器人。机器有公网 IP 的话，**要么设 token，要么用 `trusted_ips` 限制来源**。
 
 ### 关于端口
 
 `5310` 是非特权端口，普通用户可以绑定。若确实需要 531 这类特权端口，
-必须用 `sudo` 或 `setcap` 提权 —— 框架会在启动时明确报错提示。
+必须用 `sudo` 或 `setcap` 提权——框架会在启动时明确报错提示。
 
 ## `[webui]`
 
@@ -143,10 +137,7 @@ log_capacity = 2000
 | `access_token` | string | `""` | 访问令牌，为空则不校验 |
 | `log_capacity` | number | `2000` | 内存中保留的日志条数 |
 
-> [!WARNING]
-> 控制台的权限**等同于机器人本身**：能以任意账号发消息、改配置、读日志。
-> 改成 `0.0.0.0` 时**必须**同时设置 `access_token`，否则框架会在启动时警告。
-> 远程访问优先考虑 SSH 隧道，见 [部署指南](./deploy.md#远程访问控制台)。
+**注意：** 控制台的权限**等同于机器人本身**：能以任意账号发消息、改配置、读日志。改成 `0.0.0.0` 时**必须**同时设置 `access_token`，否则框架会在启动时警告。远程访问优先考虑 SSH 隧道，见 [部署指南](./deploy.md#远程访问控制台)。
 
 ## `[plugin]`
 
@@ -161,9 +152,7 @@ hot_reload = true
 | `dir` | string | `"plugins"` | 插件目录，相对数据目录或绝对路径 |
 | `hot_reload` | bool | `true` | 文件变化时自动重载 |
 
-> [!NOTE]
-> 热重载不监听符号链接指向的目录。插件放在符号链接目录里时，
-> 改动不会触发自动重载，但可以手动重启或在 WebUI 里点重载。
+热重载不监听符号链接指向的目录。插件放在符号链接目录里时，改动不会触发自动重载，但可以手动重启或在 WebUI 里点重载。
 
 ## 命令行操作
 

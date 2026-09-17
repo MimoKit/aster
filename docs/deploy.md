@@ -128,9 +128,7 @@ docker run -d \
   aster
 ```
 
-> [!IMPORTANT]
-> 协议端在宿主机上时，容器里的 `onebot11.host` 保持 `0.0.0.0`，
-> 协议端连接宿主机的 `5310`。反过来（协议端在容器里）要用 Docker 网络名而不是 `127.0.0.1`。
+**注意：** 协议端在宿主机上时，容器里的 `onebot11.host` 保持 `0.0.0.0`，协议端连接宿主机的 `5310`。反过来（协议端在容器里）要用 Docker 网络名而不是 `127.0.0.1`。
 
 <details>
 <summary><b>docker compose</b></summary>
@@ -195,8 +193,7 @@ tail -f aster.log
 kill "$(cat aster.pid)"    # 停止
 ```
 
-> [!NOTE]
-> Aster 收到 `SIGTERM` / `SIGINT` 会优雅关闭：断开所有连接、写完日志再退出。
+Aster 收到 `SIGTERM` / `SIGINT` 会优雅关闭：断开所有连接、写完日志再退出。
 
 ## 跨机部署
 
@@ -220,9 +217,7 @@ sudo firewall-cmd --reload
 sudo ufw allow from 192.168.1.50 to any port 5310 proto tcp
 ```
 
-> [!TIP]
-> 两台机器在同一个可信内网时，也可以什么都不设、直接放行内网网段。
-> 但**绝对不要把 5310 暴露到公网且不设 token**。
+两台机器在同一个可信内网时，也可以什么都不设、直接放行内网网段。但**绝对不要把 5310 暴露到公网且不设 token**。
 
 ## 反向代理
 
@@ -259,9 +254,7 @@ server {
 wss://bot.example.com/onebot/v11/ws?access_token=<token>
 ```
 
-> [!WARNING]
-> 走代理后 `trusted_ips` 里看到的是代理的 IP，不是协议端的真实 IP。
-> 要么把代理 IP 加进白名单，要么改用 `access_token` 鉴权。
+**注意：** 走代理后 `trusted_ips` 里看到的是代理的 IP，不是协议端的真实 IP。要么把代理 IP 加进白名单，要么改用 `access_token` 鉴权。
 
 ## 远程访问控制台
 
@@ -338,8 +331,7 @@ npm install -g aster-bot@latest
 systemctl --user restart aster
 ```
 
-> [!NOTE]
-> 更新前先看 [CHANGELOG](../CHANGELOG.md)，注意有没有破坏性变更。
+更新前先看 [CHANGELOG](../CHANGELOG.md)，注意有没有破坏性变更。
 
 ### 备份
 

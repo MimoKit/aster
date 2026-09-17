@@ -100,7 +100,7 @@ asId('123')    // "123"
 asId('g1-c1')  // "g1-c1"   频道场景的复合 ID 原样保留
 ```
 
-插件拿到的事件因此是稳定的 —— **换协议端不需要改插件代码**。
+插件拿到的事件因此是稳定的—— **换协议端不需要改插件代码**。
 
 `event.ts` 同样对缺字段、错类型保持宽容：`sender` 缺失不会崩，`raw_message` 不下发就
 从消息段反推。无法识别的事件包成 `UnknownEvent` 并保留原始 JSON，而不是丢掉。
@@ -142,7 +142,7 @@ const jiti = createJiti(import.meta.url, {
 ```
 
 `moduleCache: false` 保证重新读取文件，`alias` 让插件能写
-`import { definePlugin } from 'aster-bot'` —— 指向 `dist/index.js`（已构建）
+`import { definePlugin } from 'aster-bot'` ——指向 `dist/index.js`（已构建）
 或 `src/index.ts`（开发中），两种情况都能跑。
 
 监听用 `fs.watch({ recursive: true })`，带 200ms 防抖（编辑器保存一次可能触发多个事件）。
@@ -175,7 +175,7 @@ flowchart TD
 
 ## 数据流：统计与控制台
 
-`Stats` 用普通计数器，`Logger` 用固定容量的环形缓冲。两者都不落盘 —— 重启即清零，
+`Stats` 用普通计数器，`Logger` 用固定容量的环形缓冲。两者都不落盘——重启即清零，
 这是刻意的：运行态数据不值得引入存储层。
 
 WebUI 的实时数据走 **SSE**（Server-Sent Events）而不是 WebSocket：
@@ -191,9 +191,7 @@ flowchart LR
 选 SSE 是因为它是单向的、基于普通 HTTP，不需要额外协议处理，断线重连也是浏览器内置的。
 需要双向的场景（发消息）用普通的 `POST` 就够。
 
-> [!NOTE]
-> 反向代理下 SSE 必须关掉缓冲，否则事件会攒在代理里不吐出来。
-> Nginx 需要 `proxy_buffering off`。
+反向代理下 SSE 必须关掉缓冲，否则事件会攒在代理里不吐出来。 Nginx 需要 `proxy_buffering off`。
 
 ## 目录约定
 
@@ -206,7 +204,7 @@ docs/              文档
 .github/           CI、issue 模板、自动化
 ```
 
-**内置插件不走特权路径** —— 它们和第三方插件用完全相同的公开 API。
+**内置插件不走特权路径** ——它们和第三方插件用完全相同的公开 API。
 这既是自我约束，也是 API 可用性的活体验证：如果内置插件写起来别扭，说明 API 有问题。
 
 ## 为什么是 TypeScript 而不是别的
@@ -224,6 +222,6 @@ docs/              文档
 
 ## 延伸阅读
 
-- [OneBot v11 标准](https://github.com/botuniverse/onebot-11) —— 协议细节
-- [插件开发](./plugin.md) —— 从插件视角看这套结构
-- [配置参考](./config.md) —— 各监听项的取舍
+- [OneBot v11 标准](https://github.com/botuniverse/onebot-11) ——协议细节
+- [插件开发](./plugin.md) ——从插件视角看这套结构
+- [配置参考](./config.md) ——各监听项的取舍
