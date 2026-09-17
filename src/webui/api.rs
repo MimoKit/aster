@@ -703,20 +703,46 @@ async fn send_message(
     }
 }
 
-/// 供测试使用：构造一个最小状态
+/// 测试用临时目录，离开作用域时自动删除。
+///
+/// 不用 `tempfile` 是为了避免为测试引入额外依赖。
 #[cfg(test)]
-pub(crate) fn test_state(config: Config) -> (WebUiState, std::path::PathBuf) {
-    // 不引入 tempfile 依赖，用手写临时目录
-    let dir = std::env::temp_dir().join(format!(
-        "aster-webui-test-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0)
-    ));
-    std::fs::create_dir_all(&dir).expect("创建临时目录失败");
-    let config_path = dir.join("config.toml");
+pub(crate) struct TempDir(std::path::PathBuf);
+
+#[cfg(test)]
+impl TempDir {
+    fn new(label: &str) -> Self {
+        let dir = std::env::temp_dir().join(format!(
+            "aster-webui-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).expect("创建临时目录失败");
+        Self(dir)
+    }
+
+    fn path(&self) -> &std::path::Path {
+        &self.0
+    }
+}
+
+#[cfg(test)]
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+/// 供测试使用：构造一个最小状态
+///
+/// 返回的 [`TempDir`] 必须被测试持有，否则目录会提前删除。
+#[cfg(test)]
+pub(crate) fn test_state(config: Config) -> (WebUiState, TempDir) {
+    let dir = TempDir::new("test");
+    let config_path = dir.path().join("config.toml");
     std::fs::write(
         &config_path,
         toml::to_string_pretty(&config).expect("序列化配置失败"),
