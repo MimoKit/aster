@@ -1,6 +1,6 @@
 {
   "name": "aster-bot",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Aster —— 用 Rust 编写的 Bot 框架（OneBot v11），由 Node.js 提供命令行管理",
   "type": "module",
   "bin": {

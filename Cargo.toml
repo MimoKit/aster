@@ -1,6 +1,6 @@
 [package]
 name = "aster"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2024"
 description = "Aster - 一个 Rust 编写的 Bot 框架（OneBot v11 适配器优先）"
 license = "MIT"
