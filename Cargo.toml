@@ -1,6 +1,6 @@
 [package]
 name = "eternallybot"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
 description = "EternallyBot - 一个 Rust 编写的 Bot 框架（OneBot v11 适配器优先）"
 license = "MIT"
