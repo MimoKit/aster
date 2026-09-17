@@ -1,4 +1,4 @@
-# EternallyBot
+# Aster
 
 用 Rust 编写的 Bot 框架。当前阶段聚焦 **OneBot v11 适配器**与**消息字段规范化**，
 
@@ -19,7 +19,7 @@
 cargo build --release
 
 # 运行（首次会自动生成 config.toml）
-./target/release/eternallybot
+./target/release/aster
 ```
 
 启动后监听：
@@ -32,7 +32,7 @@ ws://0.0.0.0:5310/onebot/v11/ws
 
 > **关于端口**：`0531` / `531` 属于特权端口（< 1024），普通用户无法绑定。
 > 默认使用 **5310**；若确实需要 531，请执行
-> `sudo setcap 'cap_net_bind_service=+ep' target/release/eternallybot` 或用 sudo 启动，
+> `sudo setcap 'cap_net_bind_service=+ep' target/release/aster` 或用 sudo 启动，
 > 并把 `config.toml` 里的 `port` 改成 531。
 
 ## 没有协议端时如何自测
@@ -53,7 +53,7 @@ cargo run --release --example mock_adapter
 
 ```toml
 [bot]
-name = "EternallyBot"
+name = "Aster"
 
 [log]
 level = "info"          # trace | debug | info | warn | error | off
@@ -72,7 +72,7 @@ handshake_timeout = 10
 request_timeout = 60
 ```
 
-环境变量可覆盖：`ETERNALLY_HOST`、`ETERNALLY_PORT`、`ETERNALLY_TOKEN`、`ETERNALLY_LOG`。
+环境变量可覆盖：`ASTER_HOST`、`ASTER_PORT`、`ASTER_TOKEN`、`ASTER_LOG`。
 
 ## 代码结构
 
@@ -173,8 +173,8 @@ assert_eq!(Id::parse("g1-c1"), Id::Str("g1-c1".into()));  // 频道 ID 原样保
 
 ```rust
 use std::sync::Arc;
-use eternallybot::event::Event;
-use eternallybot::onebot11::connection::EventBus;
+use aster::event::Event;
+use aster::onebot11::connection::EventBus;
 
 let (bus, mut events) = EventBus::new(1024);
 tokio::spawn(async move {

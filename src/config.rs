@@ -7,9 +7,9 @@
 //!
 //! | 变量 | 作用 |
 //! |------|------|
-//! | `ETERNALLY_HOST` | OneBot v11 监听地址 |
-//! | `ETERNALLY_PORT` | OneBot v11 监听端口 |
-//! | `ETERNALLY_TOKEN` | 鉴权 Token |
+//! | `ASTER_HOST` | OneBot v11 监听地址 |
+//! | `ASTER_PORT` | OneBot v11 监听端口 |
+//! | `ASTER_TOKEN` | 鉴权 Token |
 
 use std::path::{Path, PathBuf};
 
@@ -45,7 +45,7 @@ pub struct BotConfig {
 impl Default for BotConfig {
     fn default() -> Self {
         Self {
-            name: "EternallyBot".into(),
+            name: "Aster".into(),
         }
     }
 }
@@ -206,20 +206,20 @@ impl Config {
 
     /// 环境变量覆盖
     fn apply_env(&mut self) {
-        if let Ok(host) = std::env::var("ETERNALLY_HOST")
+        if let Ok(host) = std::env::var("ASTER_HOST")
             && !host.trim().is_empty()
         {
             self.onebot11.host = host;
         }
-        if let Ok(port) = std::env::var("ETERNALLY_PORT")
+        if let Ok(port) = std::env::var("ASTER_PORT")
             && let Ok(port) = port.trim().parse::<u16>()
         {
             self.onebot11.port = port;
         }
-        if let Ok(token) = std::env::var("ETERNALLY_TOKEN") {
+        if let Ok(token) = std::env::var("ASTER_TOKEN") {
             self.onebot11.access_token = token;
         }
-        if let Ok(level) = std::env::var("ETERNALLY_LOG") {
+        if let Ok(level) = std::env::var("ASTER_LOG") {
             self.log.level = level;
         }
     }
@@ -272,7 +272,7 @@ mod tests {
         assert!(config.onebot11.auth_required());
         // 其他字段回退默认
         assert_eq!(config.onebot11.path, "/onebot/v11/ws");
-        assert_eq!(config.bot.name, "EternallyBot");
+        assert_eq!(config.bot.name, "Aster");
     }
 
     #[test]

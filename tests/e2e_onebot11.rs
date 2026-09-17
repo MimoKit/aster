@@ -1,13 +1,13 @@
 //! 端到端测试：用真实的 WebSocket 客户端模拟 OneBot v11 协议端，
-//! 连上 EternallyBot 的端口，验证「握手 → 事件规范化 → API 回调」全链路。
+//! 连上 Aster 的端口，验证「握手 → 事件规范化 → API 回调」全链路。
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use eternallybot::config::OneBot11Config;
-use eternallybot::event::{Event, Id, MessageType};
-use eternallybot::onebot11::OneBot11Server;
-use eternallybot::onebot11::connection::{BotRegistry, EventBus};
+use aster::config::OneBot11Config;
+use aster::event::{Event, Id, MessageType};
+use aster::onebot11::OneBot11Server;
+use aster::onebot11::connection::{BotRegistry, EventBus};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tokio::sync::{mpsc, watch};

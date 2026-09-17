@@ -1,8 +1,8 @@
-# EternallyBot 配置
+# Aster 配置
 # 首次运行时，本文件会被复制到工作目录下的 config.toml（不会覆盖已存在的配置）
 
 [bot]
-name = "EternallyBot"
+name = "Aster"
 
 [log]
 # trace | debug | info | warn | error | off

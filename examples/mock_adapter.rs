@@ -1,4 +1,4 @@
-//! 模拟 OneBot v11 协议端：连上 EternallyBot，上报一批事件并响应 API 调用。
+//! 模拟 OneBot v11 协议端：连上 Aster，上报一批事件并响应 API 调用。
 //!
 //! 用途：没有真实的协议端（Lagrange / NapCat / LLOneBot）时自测框架。
 //!

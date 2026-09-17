@@ -1,4 +1,4 @@
-//! EternallyBot：一个 Rust 编写的 Bot 框架。
+//! Aster：一个 Rust 编写的 Bot 框架。
 //!
 //! 当前阶段聚焦 **OneBot v11** 适配器与消息字段规范化：
 //!
@@ -18,9 +18,9 @@
 //! ```no_run
 //! # async fn demo() -> anyhow::Result<()> {
 //! use std::sync::Arc;
-//! use eternallybot::config::Config;
-//! use eternallybot::onebot11::connection::{BotRegistry, EventBus};
-//! use eternallybot::onebot11::OneBot11Server;
+//! use aster::config::Config;
+//! use aster::onebot11::connection::{BotRegistry, EventBus};
+//! use aster::onebot11::OneBot11Server;
 //!
 //! let config = Config::load()?;
 //! let (bus, mut events) = EventBus::new(256);

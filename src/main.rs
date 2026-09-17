@@ -1,14 +1,14 @@
-//! EternallyBot 可执行程序入口。
+//! Aster 可执行程序入口。
 //!
 //! 负责：加载配置 → 初始化日志 → 启动 OneBot v11 适配器 → 消费事件。
 
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use eternallybot::config::Config;
-use eternallybot::event::Event;
-use eternallybot::onebot11::OneBot11Server;
-use eternallybot::onebot11::connection::{BotRegistry, EventBus};
+use aster::config::Config;
+use aster::event::Event;
+use aster::onebot11::OneBot11Server;
+use aster::onebot11::connection::{BotRegistry, EventBus};
 use tokio::sync::watch;
 
 /// 事件队列容量
@@ -24,7 +24,7 @@ fn main() -> Result<()> {
 
 async fn run() -> Result<()> {
     let config = Config::load()?;
-    eternallybot::logging::setup(&config.log)?;
+    aster::logging::setup(&config.log)?;
 
     tracing::info!("{} v{} 启动中", config.bot.name, env!("CARGO_PKG_VERSION"));
 

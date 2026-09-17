@@ -1,6 +1,6 @@
 //! OneBot v11 适配器（反向 WebSocket 服务端）。
 //!
-//! 采用「反向 WebSocket」模式：EternallyBot 监听端口，协议端（Lagrange / NapCat /
+//! 采用「反向 WebSocket」模式：Aster 监听端口，协议端（Lagrange / NapCat /
 //! LLOneBot 等）主动连上来并上报事件。
 //!
 //! ## 连接地址
@@ -181,7 +181,7 @@ impl OneBot11Server {
                     format!(
                         "\n提示：端口 {} 属于特权端口（<1024），普通用户无法绑定。\n\
                          请改用非特权端口（如 5310），或执行：\n\
-                         \x20 sudo setcap 'cap_net_bind_service=+ep' $(which eternallybot)\n\
+                         \x20 sudo setcap 'cap_net_bind_service=+ep' $(which aster)\n\
                          \x20 或使用 sudo 启动。",
                         self.config.port
                     )
