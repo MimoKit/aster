@@ -1,0 +1,16 @@
+# Rust
+/target
+**/*.rs.bk
+
+# 运行期配置（从 config/default.toml 生成，含 token，不入库）
+/config.toml
+
+# 日志
+/logs
+*.log
+
+# 编辑器 / 系统
+.idea/
+.vscode/
+*.swp
+.DS_Store

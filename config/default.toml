@@ -1,0 +1,33 @@
+# EternallyBot 配置
+# 首次运行时，本文件会被复制到工作目录下的 config.toml（不会覆盖已存在的配置）
+
+[bot]
+name = "EternallyBot"
+
+[log]
+# trace | debug | info | warn | error | off
+level = "info"
+# 单条日志中打印的字符串最大长度
+max_len = 4096
+# 打印完整 base64:// 内容（默认折叠，避免刷屏）
+show_base64 = false
+
+[onebot11]
+enable = true
+# 监听地址，0.0.0.0 表示所有网卡
+host = "0.0.0.0"
+# 监听端口（适配器反向连接本端口；如需 531/0531 则需要特权权限）
+port = 5310
+# WebSocket 挂载路径，适配器需连接 ws://host:port/onebot/v11/ws
+path = "/onebot/v11/ws"
+# 正向 / 反向鉴权 Token，为空表示不校验。
+# 适配器可放在 Authorization 头、access_token 查询参数或 {"access_token": "..."} 字段中
+access_token = ""
+# 允许连接的适配器 IP，为空表示不限制
+trusted_ips = []
+# 心跳超时（秒），超时未收到任何数据则断开
+heartbeat_timeout = 90
+# 等待适配器主动上报 lifecycle 事件的超时（秒）
+handshake_timeout = 10
+# 发送 API 请求后等待 echo 回执的超时（秒）
+request_timeout = 60
