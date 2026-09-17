@@ -1,0 +1,53 @@
+{
+  "name": "aster-bot",
+  "version": "0.0.1",
+  "description": "Aster —— 用 Rust 编写的 Bot 框架（OneBot v11），由 Node.js 提供命令行管理",
+  "type": "module",
+  "bin": {
+    "aster": "bin/aster.js"
+  },
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "src",
+    "config/default.toml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "test:rust": "cargo test",
+    "build": "cargo build --release",
+    "prepack": "node scripts/prepack.js",
+    "start": "node bin/aster.js start"
+  },
+  "dependencies": {
+    "smol-toml": "^1.4.2"
+  },
+  "keywords": [
+    "bot",
+    "qq",
+    "onebot",
+    "onebot11",
+    "chatbot",
+    "rust",
+    "framework"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MimoKit/aster.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MimoKit/aster/issues"
+  },
+  "homepage": "https://github.com/MimoKit/aster#readme"
+}

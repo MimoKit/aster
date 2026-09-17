@@ -2,8 +2,15 @@
 /target
 **/*.rs.bk
 
-# 运行期配置（从 config/default.toml 生成，含 token，不入库）
+# Node
+node_modules/
+*.tgz
+npm-debug.log*
+
+# 运行期数据（配置含 token，不入库）
 /config.toml
+/aster-data/
+*.pid
 
 # 日志
 /logs
