@@ -21,14 +21,11 @@
 # 全局安装
 npm install -g aster-bot
 
-# 查看状态
-aster status
+# 启动（前台运行，日志直接打在终端）
+aster
 
-# 启动
-aster start
-
-# 查看日志
-aster logs -f
+# 另开终端改配置
+aster config set onebot11.port 5310
 ```
 
 ### 方式二：从源码
@@ -55,34 +52,78 @@ ws://0.0.0.0:5310/onebot/v11/ws
 
 ## 命令行
 
-npm 安装后提供 `aster` 命令：
+npm 安装后提供 `aster` 命令。**默认就是前台启动**，日志直接打在终端：
 
-| 命令 | 作用 |
-|------|------|
-| `aster start` | 后台启动 |
-| `aster run` | 前台启动（日志打到终端） |
-| `aster stop` | 停止 |
-| `aster restart` | 重启 |
-| `aster status` | 查看运行状态 |
-| `aster logs -f` | 跟踪日志 |
-| `aster config` | 查看全部配置 |
-| `aster config get <键>` | 读取配置项 |
-| `aster config set <键> <值>` | 修改配置项 |
-| `aster init` | 只初始化配置与目录 |
-| `aster build` | 编译 Rust 可执行文件 |
+```bash
+aster                 # 启动（等同于 aster start）
+aster config          # 查看全部配置
+aster config get onebot11.port
+aster config set onebot11.port 5310
+aster init            # 只生成配置，不启动
+aster build           # 只编译 Rust 可执行文件
+aster --help
+```
 
 常用选项：`--home <目录>` 指定数据目录，`--port <端口>` 临时覆盖端口。
 
-### 配置文件位置
+### 数据目录
 
-默认数据目录是 `./aster-data`，可用 `ASTER_HOME` 或 `--home` 指定：
+默认是当前目录下的 `./aster-data`，可用 `ASTER_HOME` 或 `--home` 指定：
 
 ```text
 aster-data/
-├── config.toml      运行配置
-├── aster.pid        进程号
-├── bin/aster        可执行文件
-└── logs/aster.log   运行日志
+└── config.toml      运行配置
+```
+
+框架只维护这一个文件；日志不落盘，前台直启时日志就在终端里。
+
+### 后台常驻
+
+Aster 本身**不做进程守护**（不写 PID 文件、不后台化），需要常驻请自行托管：
+
+**systemd**（推荐）
+
+```ini
+# ~/.config/systemd/user/aster.service
+[Unit]
+Description=Aster Bot
+After=network.target
+
+[Service]
+WorkingDirectory=%h/bot/Aster
+ExecStart=%h/.local/bin/aster
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now aster
+journalctl --user -u aster -f      # 看日志
+```
+
+**screen**
+
+```bash
+screen -S aster -d -m aster
+screen -r aster                     # 回到会话，Ctrl-A D 脱离
+```
+
+**tmux**
+
+```bash
+tmux new -d -s aster aster
+tmux attach -t aster
+```
+
+**nohup**
+
+```bash
+nohup aster > aster.log 2>&1 &
+tail -f aster.log
 ```
 
 ## 没有协议端时如何自测
@@ -91,14 +132,13 @@ aster-data/
 
 ```bash
 # 终端 1：启动框架
-aster start
+aster
 
 # 终端 2：连接并上报一批样例事件
 cargo run --release --example mock_adapter
-
-# 查看框架处理结果
-aster logs -f
 ```
+
+终端 1 会直接打印框架处理结果。
 
 ## 配置
 
@@ -375,20 +415,18 @@ npm 包里不含预编译二进制时会用 `cargo` 就地编译（约 1 分钟�
 **端口被占用？**
 ```bash
 aster config set onebot11.port 5311
-aster restart
+# 改完重启进程即可（前台运行时 Ctrl-C 后再启动）
 ```
 
 **想看收发的原始报文？**
 ```bash
 aster config set log.level debug
-aster restart
-aster logs -f
+# 重启后日志会打印每一帧原始 JSON（base64 自动折叠）
 ```
 
 **数据目录在哪？**
 ```bash
 aster config path    # 打印配置文件路径
-aster status         # 显示数据目录与日志位置
 ```
 
 ## 后续计划

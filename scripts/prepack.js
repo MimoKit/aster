@@ -47,7 +47,7 @@ const required = [
   'lib/cli.js',
   'lib/config.js',
   'lib/paths.js',
-  'lib/process.js',
+  'lib/run.js',
   'src/main.rs',
   'src/lib.rs',
   'Cargo.toml',
