@@ -208,20 +208,8 @@ impl OneBot11Server {
         listener: TcpListener,
         mut shutdown: watch::Receiver<bool>,
     ) -> Result<()> {
-        let local = listener.local_addr()?;
-        let path = self.config.normalized_path();
-        tracing::info!(
-            "OneBot v11 适配器已监听 ws://{}{} （鉴权：{}）",
-            local,
-            path,
-            if self.config.auth_required() {
-                "已开启"
-            } else {
-                "关闭"
-            }
-        );
-
         let (conn_tx, mut conn_rx) = mpsc::channel::<(SocketAddr, TcpStream)>(64);
+        let path = self.config.normalized_path();
 
         // 接受循环单独持有一个 shutdown 订阅，主循环保留自己的那份
         let mut accept_shutdown = shutdown.clone();

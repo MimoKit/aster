@@ -92,23 +92,50 @@ async fn run() -> Result<()> {
         return Ok(());
     }
 
+    // 先完成端口绑定再进入事件循环：
+    // 绑定失败（例如端口被占用）必须立即报错退出，
+    // 否则进程会静默挂起，用户看不到任何反馈。
+    let listener = server.bind().await?;
+    let local = listener.local_addr()?;
+    tracing::info!(
+        "OneBot v11 适配器已监听 ws://{}{} （鉴权：{}）",
+        local,
+        server.config.normalized_path(),
+        if server.config.auth_required() {
+            "已开启"
+        } else {
+            "关闭"
+        }
+    );
+
     let serve_task = {
         let server = server.clone();
         let shutdown_rx = shutdown_rx.clone();
-        tokio::spawn(async move { server.serve(shutdown_rx).await })
+        tokio::spawn(async move { server.serve_on(listener, shutdown_rx).await })
     };
 
-    wait_for_shutdown().await;
-    tracing::info!("收到退出信号，正在关闭...");
-    let _ = shutdown_tx.send(true);
-
-    match tokio::time::timeout(std::time::Duration::from_secs(5), serve_task).await {
-        Ok(Ok(Ok(()))) => tracing::info!("适配器已停止"),
-        Ok(Ok(Err(err))) => tracing::error!("适配器异常退出：{err:#}"),
-        Ok(Err(err)) => tracing::error!("适配器任务 panic：{err}"),
-        Err(_) => tracing::warn!("适配器停止超时，强制退出"),
+    // 等待退出信号；若适配器提前退出（异常），同样立刻返回
+    tokio::select! {
+        _ = wait_for_shutdown() => {
+            tracing::info!("收到退出信号，正在关闭...");
+        }
+        result = &mut { serve_task } => {
+            // 走到这里说明服务端在没有收到关闭信号的情况下退出了
+            match result {
+                Ok(Ok(())) => tracing::warn!("适配器意外停止"),
+                Ok(Err(err)) => {
+                    consumer.abort();
+                    return Err(err.context("适配器异常退出"));
+                }
+                Err(err) => {
+                    consumer.abort();
+                    return Err(anyhow::anyhow!("适配器任务 panic：{err}"));
+                }
+            }
+        }
     }
 
+    let _ = shutdown_tx.send(true);
     consumer.abort();
     Ok(())
 }
