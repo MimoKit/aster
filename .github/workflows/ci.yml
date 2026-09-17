@@ -22,7 +22,7 @@ jobs:
     name: 类型检查与规范
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -47,7 +47,7 @@ jobs:
         # 20 是 engines 下限，24 是当前 LTS
         node: [20, 22, 24]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -67,7 +67,7 @@ jobs:
     name: 前端构建
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
