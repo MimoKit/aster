@@ -1,0 +1,5 @@
+node_modules/
+*.local
+
+# dist 不纳入 git，但需要随 npm 包分发——
+# 由顶层 .npmignore 与 package.json 的 files 白名单控制

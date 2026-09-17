@@ -43,14 +43,18 @@
 //! # }
 //! ```
 
+pub mod app;
 pub mod config;
 pub mod event;
+pub mod logbuf;
 pub mod logging;
 pub mod message;
 pub mod onebot11;
 pub mod plugin;
 pub mod stats;
+pub mod webui;
 
+pub use app::App;
 pub use config::Config;
 pub use event::{Event, EventBase, Id, MessageEvent, MessageType};
 pub use message::{MessageContent, Segment};

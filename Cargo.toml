@@ -1,12 +1,13 @@
 [package]
 name = "aster"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2024"
 description = "Aster - 一个 Rust 编写的 Bot 框架（OneBot v11 适配器优先）"
 license = "MIT"
 
 [dependencies]
 anyhow = "1.0.104"
+axum = { version = "0.8.9", features = ["ws"] }
 base64 = "0.23.1"
 chrono = { version = "0.4.45", features = ["serde"] }
 futures-util = { version = "0.3.34", default-features = false, features = ["sink", "std"] }
@@ -15,8 +16,10 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
 sha1 = "0.11.0"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal", "io-util"] }
+tokio-stream = { version = "0.1.19", features = ["sync"] }
 tokio-tungstenite = "0.30.0"
 toml = "1.1.6"
+tower-http = { version = "0.7.1", features = ["fs", "cors", "trace"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 

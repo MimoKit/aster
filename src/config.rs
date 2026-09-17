@@ -23,6 +23,7 @@ pub struct Config {
     pub bot: BotConfig,
     pub log: LogConfig,
     pub onebot11: OneBot11Config,
+    pub webui: WebUiConfig,
 }
 
 impl Default for Config {
@@ -31,7 +32,67 @@ impl Default for Config {
             bot: BotConfig::default(),
             log: LogConfig::default(),
             onebot11: OneBot11Config::default(),
+            webui: WebUiConfig::default(),
         }
+    }
+}
+
+/// WebUI 配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct WebUiConfig {
+    /// 是否启用 WebUI 与 HTTP API
+    pub enable: bool,
+    /// 监听地址
+    pub host: String,
+    /// 监听端口
+    pub port: u16,
+    /// 访问令牌，为空则不校验（仅建议在本机使用）
+    pub access_token: String,
+    /// 内存中保留的日志条数
+    pub log_capacity: usize,
+}
+
+impl Default for WebUiConfig {
+    fn default() -> Self {
+        Self {
+            enable: true,
+            host: "127.0.0.1".into(),
+            port: 5311,
+            access_token: String::new(),
+            log_capacity: crate::logbuf::DEFAULT_CAPACITY,
+        }
+    }
+}
+
+impl WebUiConfig {
+    /// 是否需要鉴权
+    pub fn auth_required(&self) -> bool {
+        !self.access_token.is_empty()
+    }
+
+    /// 监听地址字符串
+    pub fn bind_addr(&self) -> String {
+        if self.host.contains(':') && !self.host.starts_with('[') {
+            format!("[{}]:{}", self.host, self.port)
+        } else {
+            format!("{}:{}", self.host, self.port)
+        }
+    }
+
+    /// 访问地址（用于日志提示）
+    pub fn display_url(&self) -> String {
+        let host = if self.host == "0.0.0.0" || self.host == "::" {
+            "127.0.0.1"
+        } else {
+            &self.host
+        };
+        let host = if host.contains(':') && !host.starts_with('[') {
+            format!("[{host}]")
+        } else {
+            host.to_string()
+        };
+        format!("http://{host}:{}", self.port)
     }
 }
 

@@ -8,6 +8,11 @@
 target/
 **/*.rs.bk
 
+# WebUI：只发布构建产物（webui/dist），源码与依赖不入包
+# 注意：这里不能写 `webui/*.json` 之类的通配，npm 会把 dist 一并排掉
+webui/dist/README.txt
+webui/node_modules/
+
 # Node 侧开发文件
 test/
 node_modules/

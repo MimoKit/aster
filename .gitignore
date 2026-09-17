@@ -6,6 +6,7 @@
 node_modules/
 *.tgz
 npm-debug.log*
+webui/dist/
 
 # 运行期数据（配置含 token，不入库）
 /config.toml
@@ -21,3 +22,7 @@ npm-debug.log*
 .vscode/
 *.swp
 .DS_Store
+
+# WebUI
+webui/node_modules/
+webui/dist/

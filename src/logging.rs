@@ -4,7 +4,7 @@
 //! 因此默认折叠为 `base64://...(N 字节)`，并对超长内容截断。
 
 use std::fmt;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use anyhow::Result;
 use tracing::{Event, Subscriber};
@@ -14,6 +14,7 @@ use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::registry::LookupSpan;
 
 use crate::config::LogConfig;
+use crate::logbuf::LogBuffer;
 
 /// 日志样式配置（进程内一次性设置）
 #[derive(Debug, Clone, Copy)]
@@ -23,6 +24,19 @@ struct LogStyle {
 }
 
 static STYLE: OnceLock<LogStyle> = OnceLock::new();
+
+/// 进程级日志缓冲，供 WebUI 读取。
+///
+/// 用全局单例是因为 tracing 的 `FormatEvent` 只接受函数指针实现，
+/// 无法在闭包里捕获状态。
+static BUFFER: OnceLock<Arc<LogBuffer>> = OnceLock::new();
+
+/// 获取（或惰性创建）全局日志缓冲
+pub fn buffer() -> Arc<LogBuffer> {
+    BUFFER
+        .get_or_init(|| LogBuffer::new(crate::logbuf::DEFAULT_CAPACITY))
+        .clone()
+}
 
 fn style() -> LogStyle {
     *STYLE.get_or_init(|| LogStyle {
@@ -126,6 +140,12 @@ where
         {
             scope = format!("{{{}}} ", fields);
         }
+
+        // 同时写入内存缓冲，供 WebUI 日志页使用（内容同样经过脱敏）
+        let sanitized = sanitize(&visitor.message);
+        BUFFER
+            .get_or_init(|| LogBuffer::new(crate::logbuf::DEFAULT_CAPACITY))
+            .push(level.as_str(), meta.target(), &format!("{scope}{sanitized}"));
 
         writeln!(
             writer,

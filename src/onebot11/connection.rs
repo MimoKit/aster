@@ -23,7 +23,7 @@ use serde_json::Value;
 use tokio::net::TcpStream;
 use std::sync::RwLock;
 
-use tokio::sync::{Mutex, mpsc, watch};
+use tokio::sync::{Mutex, broadcast, mpsc, watch};
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
@@ -214,22 +214,39 @@ impl BotRegistry {
     }
 }
 
-/// 事件总线：把规范化后的事件广播给订阅者
+/// 事件总线：把规范化后的事件分发给消费者。
+///
+/// 两条通道各司其职：
+/// * `mpsc` —— 主消费循环（插件分发），保证顺序且需要背压
+/// * `broadcast` —— 旁路订阅者（WebUI 的 SSE 实时流），允许滞后，不拖慢主循环
 #[derive(Debug, Clone)]
 pub struct EventBus {
     tx: mpsc::Sender<Arc<Event>>,
+    taps: broadcast::Sender<Arc<Event>>,
 }
 
 impl EventBus {
     /// 创建事件总线
     pub fn new(capacity: usize) -> (Self, mpsc::Receiver<Arc<Event>>) {
         let (tx, rx) = mpsc::channel(capacity);
-        (Self { tx }, rx)
+        let (taps, _) = broadcast::channel(capacity.max(64));
+        (Self { tx, taps }, rx)
+    }
+
+    /// 订阅事件实时流（用于 WebUI 等旁路消费者）
+    ///
+    /// 只收到订阅之后发生的事件；滞后过多时会收到 `RecvError::Lagged`。
+    pub fn subscribe(&self) -> broadcast::Receiver<Arc<Event>> {
+        self.taps.subscribe()
     }
 
     /// 发布事件（队列满时丢弃当前事件并告警，避免阻塞读循环）
     pub async fn publish(&self, event: Event) {
         let event = Arc::new(event);
+
+        // 旁路广播：没有订阅者时 send 会报错，属正常情况
+        let _ = self.taps.send(event.clone());
+
         match self.tx.try_send(event.clone()) {
             Ok(()) => {}
             Err(mpsc::error::TrySendError::Full(_)) => {
