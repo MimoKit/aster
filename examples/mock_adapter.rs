@@ -164,7 +164,17 @@ async fn main() -> anyhow::Result<()> {
         "message": "我是机器人", "sender": {"user_id": 10001, "nickname": "模拟Bot"}
     }));
 
-    println!("[mock] 已上报 6 条事件，保持连接 10 秒以便观察框架日志...");
+    // 3.7 触发内置状态插件（命令词独立成词，不需要 # 前缀）
+    send!(json!({
+        "time": now(), "self_id": 10001, "post_type": "message",
+        "message_type": "group", "sub_type": "normal",
+        "message_id": 1004, "user_id": 20002, "group_id": 30003,
+        "raw_message": "as 详细", "message": "as 详细",
+        "sender": {"user_id": 20002, "nickname": "小明", "role": "member"}
+    }));
+
+    println!("[mock] 已上报 7 条事件，保持连接 10 秒以便观察框架日志...");
+    println!("[mock] 其中 `as 详细` 会触发内置状态插件，框架应回一条状态消息");
     tokio::time::sleep(Duration::from_secs(10)).await;
 
     responder.abort();

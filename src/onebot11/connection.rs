@@ -21,6 +21,8 @@ use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
 use tokio::net::TcpStream;
+use std::sync::RwLock;
+
 use tokio::sync::{Mutex, mpsc, watch};
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::Message;
@@ -56,7 +58,10 @@ pub struct Bot {
     pub connections: AtomicI64,
     pub online: AtomicBool,
     /// 机器人 API 调用入口
-    pub api: Arc<ApiCaller>,
+    ///
+    /// 用 `RwLock` 包裹是因为协议端会重连：每次重连都会新建写通道，
+    /// 必须把句柄换成新连接的，否则重连后所有发送都会落到已关闭的旧通道。
+    api: RwLock<Arc<ApiCaller>>,
     pub connected_at: Instant,
 }
 
@@ -67,9 +72,25 @@ impl Bot {
             info: Mutex::new(BotInfo::default()),
             connections: AtomicI64::new(0),
             online: AtomicBool::new(true),
-            api,
+            api: RwLock::new(api),
             connected_at: Instant::now(),
         }
+    }
+
+    /// 当前的 API 调用器
+    pub fn api(&self) -> Arc<ApiCaller> {
+        self.api
+            .read()
+            .unwrap_or_else(|err| err.into_inner())
+            .clone()
+    }
+
+    /// 连接变化时替换 API 调用器
+    ///
+    /// 返回被替换下来的旧调用器（调用方负责让它失败，唤醒挂起的请求）。
+    pub fn replace_api(&self, api: Arc<ApiCaller>) -> Arc<ApiCaller> {
+        let mut guard = self.api.write().unwrap_or_else(|err| err.into_inner());
+        std::mem::replace(&mut guard, api)
     }
 
     /// 登录号（未取到时回退到 self_id）
@@ -92,7 +113,7 @@ impl Bot {
         message: Value,
     ) -> Result<Value> {
         let (action, params) = super::action::api::send_group_msg(group_id, message);
-        self.api.call(action, params).await
+        self.api().call(action, params).await
     }
 
     /// 发送私聊消息
@@ -102,7 +123,7 @@ impl Bot {
         message: Value,
     ) -> Result<Value> {
         let (action, params) = super::action::api::send_private_msg(user_id, message);
-        self.api.call(action, params).await
+        self.api().call(action, params).await
     }
 
     /// 回复一条消息（自动判断群聊 / 私聊）
@@ -130,7 +151,7 @@ impl Bot {
     /// 撤回消息
     pub async fn delete_msg(&self, message_id: impl std::fmt::Display) -> Result<Value> {
         let (action, params) = super::action::api::delete_msg(message_id);
-        self.api.call(action, params).await
+        self.api().call(action, params).await
     }
 }
 
@@ -152,6 +173,9 @@ impl BotRegistry {
             Some(bot) => {
                 bot.connections.fetch_add(1, Ordering::Relaxed);
                 bot.online.store(true, Ordering::Relaxed);
+                // 重连：换上新连接的 API 句柄，并让旧连接上的挂起请求立即失败
+                let previous = bot.replace_api(api);
+                tokio::spawn(async move { previous.abort_all().await });
                 bot.clone()
             }
             None => {
@@ -362,7 +386,7 @@ impl Connection {
 
         // 异步拉取登录信息，失败不影响连接
         tokio::spawn(async move {
-            match bot.api.call("get_login_info", serde_json::json!({})).await {
+            match bot.api().call("get_login_info", serde_json::json!({})).await {
                 Ok(data) => {
                     let mut info = bot.info.lock().await;
                     info.user_id = data.get("user_id").and_then(Id::from_value);
@@ -699,6 +723,72 @@ mod tests {
         assert!(!bot.online.load(Ordering::Relaxed));
         // 幂等
         conn.cleanup().await;
+    }
+
+    #[tokio::test]
+    async fn reconnect_swaps_api_handle() {
+        // 回归测试：协议端重连后，Bot 必须改用新连接的写通道，
+        // 否则所有发送都会落到已关闭的旧通道上。
+        let registry = BotRegistry::default();
+
+        let (tx1, mut rx1) = mpsc::channel(4);
+        let api1 = Arc::new(ApiCaller::new(tx1, Duration::from_secs(1)));
+        let bot = registry.acquire(&Id::Num(1), api1).await;
+        assert!(Arc::ptr_eq(&bot.api(), &bot.api()));
+
+        // 第一次调用：走旧通道
+        let task1 = {
+            let bot = bot.clone();
+            tokio::spawn(async move { bot.send_group_msg("1", json!("hi")).await })
+        };
+        assert!(matches!(rx1.recv().await, Some(Outgoing::Text(_))));
+        let _ = task1.await;
+
+        // 模拟重连：新的 ApiCaller
+        let (tx2, mut rx2) = mpsc::channel(4);
+        let api2 = Arc::new(ApiCaller::new(tx2, Duration::from_secs(1)));
+        let reused = registry.acquire(&Id::Num(1), api2).await;
+        assert!(Arc::ptr_eq(&bot, &reused), "同一 self_id 应复用 Bot");
+
+        // 重连后调用：必须走新通道
+        let task2 = {
+            let bot = bot.clone();
+            tokio::spawn(async move { bot.send_group_msg("1", json!("hi")).await })
+        };
+        let received = tokio::time::timeout(Duration::from_secs(2), rx2.recv()).await;
+        assert!(
+            matches!(received, Ok(Some(Outgoing::Text(_)))),
+            "重连后应使用新连接的通道"
+        );
+        let _ = task2.await;
+
+        // 旧通道不应再收到新请求
+        assert!(rx1.try_recv().is_err(), "旧通道不应再被使用");
+    }
+
+    #[tokio::test]
+    async fn reconnect_aborts_pending_requests_on_old_connection() {
+        let registry = BotRegistry::default();
+
+        let (tx1, _rx1) = mpsc::channel(4);
+        let api1 = Arc::new(ApiCaller::new(tx1, Duration::from_secs(30)));
+        let bot = registry.acquire(&Id::Num(1), api1).await;
+
+        // 在旧连接上发一个请求（不会收到响应）
+        let pending = {
+            let bot = bot.clone();
+            tokio::spawn(async move { bot.send_group_msg("1", json!("hang")).await })
+        };
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // 重连应让旧请求立刻失败，而不是干等超时
+        let (tx2, _rx2) = mpsc::channel(4);
+        let api2 = Arc::new(ApiCaller::new(tx2, Duration::from_secs(30)));
+        registry.acquire(&Id::Num(1), api2).await;
+
+        let result = tokio::time::timeout(Duration::from_secs(2), pending).await;
+        assert!(result.is_ok(), "挂起请求应被立即中断，而不是等超时");
+        assert!(result.unwrap().unwrap().is_err(), "旧请求应失败");
     }
 
     #[tokio::test]

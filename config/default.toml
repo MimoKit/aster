@@ -3,6 +3,13 @@
 
 [bot]
 name = "Aster"
+# 机器人主人账号，拥有所有插件权限（可填多个）
+masters = []
+# 是否加载内置插件（目前是 as 状态查询）
+builtin_plugins = true
+# 命令强制前缀，留空则命令直接以命令词开头（如 as）
+# 需要 #as 风格时改成 "#"
+command_prefix = ""
 
 [log]
 # trace | debug | info | warn | error | off

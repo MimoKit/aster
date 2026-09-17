@@ -68,6 +68,15 @@ impl Id {
     pub fn is_all(&self) -> bool {
         matches!(self, Id::Str(s) if s == "all" || s == "everyone")
     }
+
+    /// 类型无关的相等判断
+    ///
+    /// [`Id::parse`] 会把纯数字字符串归一为 [`Id::Num`]，因此常规路径下
+    /// `PartialEq` 已够用；此方法额外覆盖手工构造 `Id::Str("123")`
+    /// 这类未归一的情形，按字符串形式比较。
+    pub fn same(&self, other: &Id) -> bool {
+        self.as_str() == other.as_str()
+    }
 }
 
 impl fmt::Display for Id {

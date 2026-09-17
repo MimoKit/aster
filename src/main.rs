@@ -1,6 +1,6 @@
 //! Aster 可执行程序入口。
 //!
-//! 负责：加载配置 → 初始化日志 → 启动 OneBot v11 适配器 → 消费事件。
+//! 负责：加载配置 → 初始化日志 → 注册插件 → 启动 OneBot v11 适配器 → 分发事件。
 
 use std::sync::Arc;
 
@@ -9,10 +9,15 @@ use aster::config::Config;
 use aster::event::Event;
 use aster::onebot11::OneBot11Server;
 use aster::onebot11::connection::{BotRegistry, EventBus};
+use aster::plugin::builtin;
+use aster::plugin::{DispatchBase, PluginRegistry};
+use aster::stats::Stats;
 use tokio::sync::watch;
 
 /// 事件队列容量
 const EVENT_QUEUE: usize = 1024;
+/// 状态插件的默认命令词
+const STATUS_COMMAND: &str = "as";
 
 fn main() -> Result<()> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -28,12 +33,53 @@ async fn run() -> Result<()> {
 
     tracing::info!("{} v{} 启动中", config.bot.name, env!("CARGO_PKG_VERSION"));
 
+    // ── 插件注册 ──
+    let mut registry = PluginRegistry::new();
+    if config.bot.builtin_plugins {
+        registry.register(builtin::status_plugin_with(
+            config.bot.command_prefix.clone(),
+            STATUS_COMMAND,
+        ));
+    }
+    let plugin_count = registry.enabled_count();
+    let rule_count = registry.rule_count();
+
+    if plugin_count == 0 {
+        tracing::warn!("未加载任何插件");
+    } else {
+        tracing::info!("已加载 {plugin_count} 个插件、{rule_count} 条规则");
+        for plugin in registry.plugins() {
+            tracing::debug!(
+                "  - {}：{}（优先级 {}，{} 条规则）",
+                plugin.name,
+                plugin.desc,
+                plugin.priority,
+                plugin.rule_count()
+            );
+        }
+    }
+
+    let stats = Arc::new(Stats::new());
+    stats.set_plugins(plugin_count);
+
+    if !config.bot.masters.is_empty() {
+        tracing::info!("主人账号：{}", config.bot.masters.join(", "));
+    } else {
+        tracing::debug!("未配置主人账号（bot.masters），权限类命令将不可用");
+    }
+
     let (bus, events) = EventBus::new(EVENT_QUEUE);
     let bots = Arc::new(BotRegistry::default());
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
-    // 事件消费侧：打印规范化结果，后续接插件系统
-    let consumer = tokio::spawn(consume_events(events));
+    // ── 事件消费：统计 + 插件分发 ──
+    let consumer = tokio::spawn(consume_events(
+        events,
+        Arc::new(registry),
+        stats.clone(),
+        bots.clone(),
+        Arc::new(config.bot.master_ids()),
+    ));
 
     let server = Arc::new(OneBot11Server::new(
         config.onebot11.clone(),
@@ -91,23 +137,43 @@ async fn wait_for_shutdown() {
     }
 }
 
-/// 事件消费循环：打印事件摘要，并演示回复能力
-async fn consume_events(mut events: tokio::sync::mpsc::Receiver<Arc<Event>>) {
+/// 事件消费循环：统计 → 日志 → 插件分发
+async fn consume_events(
+    mut events: tokio::sync::mpsc::Receiver<Arc<Event>>,
+    registry: Arc<PluginRegistry>,
+    stats: Arc<Stats>,
+    bots: Arc<BotRegistry>,
+    masters: Arc<Vec<aster::event::Id>>,
+) {
     while let Some(event) = events.recv().await {
+        stats.record_event(&event);
         log_event(&event);
 
-        // 示例：私聊 / 群聊里 @ 机器人并说 "ping" 时回 "pong"
-        if let Event::Message(msg) = &*event
-            && msg.is_at_self()
-            && msg.text().contains("ping")
-        {
-            let bots = BotRegistry::default();
-            let _ = bots; // 占位：真正的回复逻辑将由插件系统接管
-            tracing::info!(
-                "命中示例规则：{} 在 {} 里 @ 了机器人",
-                msg.display_name(),
-                msg.session_id()
-            );
+        // 只有 message 事件参与插件分发（message_sent 是机器人自己发的，跳过以免自触发）
+        let Event::Message(message) = &*event else {
+            continue;
+        };
+        let message = Arc::new(message.clone());
+
+        let Some(self_id) = event.self_id() else {
+            continue;
+        };
+        let Some(bot) = bots.get(self_id).await else {
+            tracing::debug!("事件来自未知账号 {self_id}，跳过插件分发");
+            continue;
+        };
+
+        let result = registry
+            .dispatch(DispatchBase {
+                event: &message,
+                bot,
+                stats: stats.clone(),
+                masters: &masters,
+            })
+            .await;
+
+        if let Err(err) = result {
+            tracing::error!("插件分发出错：{err:#}");
         }
     }
 }
@@ -143,11 +209,9 @@ fn log_event(event: &Event) {
             request.base().self_id,
             request.flag(),
         ),
-        Event::Meta(meta) => tracing::debug!(
-            "[{}] {}",
-            event.event_name(),
-            meta.base().self_id
-        ),
+        Event::Meta(meta) => {
+            tracing::debug!("[{}] {}", event.event_name(), meta.base().self_id)
+        }
         Event::Unknown { post_type, .. } => {
             tracing::warn!("未识别事件：post_type={post_type}")
         }

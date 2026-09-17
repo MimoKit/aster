@@ -40,13 +40,39 @@ impl Default for Config {
 pub struct BotConfig {
     /// 框架名，用于日志
     pub name: String,
+    /// 机器人主人账号，拥有全部插件权限
+    pub masters: Vec<String>,
+    /// 是否加载内置插件（状态查询等）
+    pub builtin_plugins: bool,
+    /// 命令强制前缀，留空表示命令直接以命令词开头（如 `as`）
+    pub command_prefix: String,
 }
 
 impl Default for BotConfig {
     fn default() -> Self {
         Self {
             name: "Aster".into(),
+            masters: Vec::new(),
+            builtin_plugins: true,
+            command_prefix: String::new(),
         }
+    }
+}
+
+impl BotConfig {
+    /// 主人账号列表（已归一为 [`crate::event::Id`]）
+    pub fn master_ids(&self) -> Vec<crate::event::Id> {
+        self.masters
+            .iter()
+            .map(|s| crate::event::Id::parse(s.trim()))
+            .collect()
+    }
+
+    /// 指定账号是否为主人
+    ///
+    /// 比较时忽略 ID 的数字/字符串类型差异。
+    pub fn is_master(&self, user_id: &crate::event::Id) -> bool {
+        self.master_ids().iter().any(|id| id.same(user_id))
     }
 }
 
@@ -282,5 +308,50 @@ mod tests {
         assert_eq!(config.bind_addr(), "[::1]:5310");
         config.host = "127.0.0.1".into();
         assert_eq!(config.bind_addr(), "127.0.0.1:5310");
+    }
+
+    #[test]
+    fn master_ids_are_normalized() {
+        let config = BotConfig {
+            masters: vec!["123".into(), " 456 ".into()],
+            ..BotConfig::default()
+        };
+        let ids = config.master_ids();
+        assert_eq!(ids.len(), 2);
+        assert_eq!(ids[0], crate::event::Id::Num(123));
+        // 前后空白被裁剪
+        assert_eq!(ids[1], crate::event::Id::Num(456));
+    }
+
+    #[test]
+    fn is_master_matches_across_types() {
+        let config = BotConfig {
+            masters: vec!["123".into()],
+            ..BotConfig::default()
+        };
+        assert!(config.is_master(&crate::event::Id::Num(123)));
+        assert!(config.is_master(&crate::event::Id::Str("123".into())));
+        assert!(!config.is_master(&crate::event::Id::Num(999)));
+    }
+
+    #[test]
+    fn empty_masters_by_default() {
+        let config = BotConfig::default();
+        assert!(config.masters.is_empty());
+        assert!(config.master_ids().is_empty());
+        assert!(config.builtin_plugins);
+    }
+
+    #[test]
+    fn parse_masters_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+            [bot]
+            masters = ["10001", "10002"]
+            "#,
+        )
+        .unwrap();
+        assert_eq!(config.bot.masters.len(), 2);
+        assert!(config.bot.is_master(&crate::event::Id::Num(10001)));
     }
 }

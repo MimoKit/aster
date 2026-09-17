@@ -48,7 +48,11 @@ pub mod event;
 pub mod logging;
 pub mod message;
 pub mod onebot11;
+pub mod plugin;
+pub mod stats;
 
 pub use config::Config;
 pub use event::{Event, EventBase, Id, MessageEvent, MessageType};
 pub use message::{MessageContent, Segment};
+pub use plugin::{Permission, Plugin, PluginContext, PluginRegistry, Rule, Scope};
+pub use stats::Stats;

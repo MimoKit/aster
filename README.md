@@ -10,6 +10,7 @@
 - **ID 类型归一**：`123` 与 `"123"` 视为同一个 ID，字符串 ID（如频道 `g1-c1`）原样保留
 - **API 调用**：基于 `echo` 的请求-响应关联，带超时与连接断开清理
 - **鉴权**：支持 `Authorization: Bearer`、`?access_token=` 查询参数、IP 白名单
+- **插件系统**：命令词独立成词、优先级排序、四级权限、群聊/私聊范围控制
 - **日志脱敏**：`base64://` 内容自动折叠，避免刷屏
 
 ## 快速开始
@@ -130,10 +131,11 @@ request_timeout = 60
 
 ```text
 src/
-├── main.rs              程序入口：配置 → 日志 → 启动适配器 → 消费事件
+├── main.rs              程序入口：配置 → 日志 → 注册插件 → 启动适配器 → 分发事件
 ├── lib.rs               库入口与文档
 ├── config.rs            配置加载与校验
 ├── logging.rs           日志初始化与 base64 脱敏
+├── stats.rs             运行时统计（事件计数、运行时长）
 ├── message/             ★ 消息字段规范化
 │   ├── segment.rs       消息段枚举（Segment）+ CQ 转义
 │   ├── cq.rs            CQ 码字符串 → 消息段
@@ -143,11 +145,105 @@ src/
 ├── event/               ★ 事件规范化
 │   ├── common.rs        Id / Sender / Anonymous / FileInfo / 取值辅助
 │   └── mod.rs           Event / MessageEvent / NoticeEvent / RequestEvent / MetaEvent
+├── plugin/              ★ 插件系统
+│   ├── rule.rs          规则：匹配方式 / 权限 / 范围
+│   ├── builtin.rs       内置插件（as 状态查询）
+│   └── mod.rs           Plugin / PluginContext / PluginRegistry
 └── onebot11/            OneBot v11 适配器
     ├── action.rs        action-echo 调用（ApiCaller）+ 常用 API 封装
     ├── connection.rs    连接生命周期、Bot 注册表、EventBus
     └── mod.rs           WS 服务端、握手鉴权、accept 循环
 ```
+
+## 插件系统
+
+### 内置插件：`as` 状态查询
+
+命令词独立成词，**不需要 `#` 之类的符号**（语义同 GsCore 的 `on_command`）：
+
+| 发送内容 | 效果 |
+|---------|------|
+| `as` | 简要运行状态 |
+| `as 详细` / `as detail` | 详细信息（事件统计、启动时间、主人配置） |
+| `as 帮助` / `as help` | 命令列表 |
+
+`asd`、`asdf 详细`、`xas` 都**不会**误触发。
+
+实际回复示例：
+
+```text
+【Aster 运行状态】
+机器人：弥灵（3853125761）
+版本：v0.0.1
+运行：1小时2分3秒
+已处理事件：1234 条
+插件：1 个
+```
+
+### 命令前缀可配置
+
+默认不需要前缀。若想改成 `#as` 风格：
+
+```toml
+[bot]
+command_prefix = "#"     # 之后命令变成 #as、#as 详细
+```
+
+### 写一个插件
+
+```rust
+use aster::plugin::{Handled, Permission, Plugin, Rule, Scope};
+
+let plugin = Plugin::builder("hello")
+    .desc("打招呼")
+    .priority(100)                    // 数字越小越先执行
+    .rule(
+        Rule::command("hi")           // 命令词独立成词
+            .name("打招呼")
+            .permission(Permission::All)
+            .scope(Scope::Any)        // Any / Group / Private
+            .handler(|ctx| async move {
+                let name = ctx.event.display_name();
+                let args = ctx.args();          // 命令词之后的参数
+                ctx.reply(format!("你好，{name}！参数：{args}")).await?;
+                Ok(Handled::Stop)               // Stop 停止后续规则；Continue 继续
+            }),
+    )
+    .build();
+
+registry.register(plugin);
+```
+
+### 匹配方式
+
+| 构造 | 语义 | 示例 |
+|------|------|------|
+| `Rule::command("as")` | 命令词独立成词，后接参数可选 | `as`、`as 详细` ✅；`asd` ❌ |
+| `Rule::prefix("#as")` | 只要以该串开头就命中 | `#as`、`#asd` ✅ |
+| `Rule::exact("状态")` | 整条消息完全相等 | `状态` ✅；`状态啊` ❌ |
+| `Rule::regex(r"^echo\s+(.+)$")` | 正则匹配，捕获组作为参数 | `echo 你好` ✅ |
+| `Rule::contains("状态")` | 包含子串 | `看看状态` ✅ |
+| `Rule::any()` | 匹配所有消息 | 慎用 |
+
+### 权限与范围
+
+权限四档：`Permission::All`（所有人）、`Master`（主人）、`Admin`（群管理+群主+主人）、`Owner`（群主+主人）。
+主人账号在 `config.toml` 里配置：
+
+```toml
+[bot]
+masters = ["3853125761"]
+```
+
+主人**始终放行**，即使规则要求群主权限。
+
+范围三档：`Scope::Any`（群聊+私聊）、`Group`（仅群聊）、`Private`（仅私聊）。
+
+### 处理函数返回值
+
+- `Ok(Handled::Stop)` —— 已处理，停止匹配后续规则（默认）
+- `Ok(Handled::Continue)` —— 已处理，但允许后续规则继续（用于旁路监听）
+- `Err(e)` —— 记录错误日志，继续尝试后续规则
 
 ## 消息字段规范化
 
@@ -261,7 +357,7 @@ if let Some(bot) = bots.get(&10001.into()).await {
 ## 测试
 
 ```bash
-cargo test                      # Rust：74 个单元 + 9 个端到端 + 1 个文档测试
+cargo test                      # Rust：128 个单元 + 9 个端到端 + 1 个文档测试
 cargo test --test e2e_onebot11  # 仅端到端（真实 WebSocket 连接）
 node --test test/               # Node：37 个测试（配置、进程管理、参数解析）
 ```
@@ -297,7 +393,9 @@ aster status         # 显示数据目录与日志位置
 
 ## 后续计划
 
-- [ ] 插件系统（命令注册、权限、冷却）
+- [x] 插件系统（命令匹配、优先级、权限、范围）
+- [ ] 插件热重载与外部插件目录
+- [ ] 命令冷却与限流
 - [ ] 正向 WebSocket（框架主动连协议端）与 HTTP POST 上报
 - [ ] 其他适配器（Satori / Milky / GsCore）
 - [ ] 群成员与好友缓存
