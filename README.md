@@ -11,6 +11,7 @@
 - **API 调用**：基于 `echo` 的请求-响应关联，带超时与连接断开清理
 - **鉴权**：支持 `Authorization: Bearer`、`?access_token=` 查询参数、IP 白名单
 - **插件系统**：命令词独立成词、优先级排序、四级权限、群聊/私聊范围控制
+- **WebUI**：TypeScript 编写的网页控制台（总览 / 连接 / 插件 / 市场 / 发送台 / 日志 / 配置）
 - **日志脱敏**：`base64://` 内容自动折叠，避免刷屏
 
 ## 快速开始
@@ -49,6 +50,44 @@ ws://0.0.0.0:5310/onebot/v11/ws
 > 默认使用 **5310**；若确实需要 531，请执行
 > `sudo setcap 'cap_net_bind_service=+ep' target/release/aster` 或用 sudo 启动，
 > 并把 `config.toml` 里的 `port` 改成 531。
+
+## WebUI
+
+TypeScript 编写的网页控制台，随框架一起启动。
+
+```bash
+aster                 # 启动后访问 http://127.0.0.1:5311
+```
+
+| 页面 | 内容 |
+|------|------|
+| 总览 | 运行时长、事件统计、在线账号、实时事件流 |
+| 连接 | 账号详情、反向 WebSocket 接入地址 |
+| 插件 | 已加载插件与其规则、权限、作用范围 |
+| 插件市场 | 浏览 [xlinxt/aster-plugins](https://github.com/xlinxt/aster-plugins) 上的插件 |
+| 发送台 | 直接调 API 发消息，用于接入调试 |
+| 日志 | 级别筛选、实时跟踪、手动暂停滚动 |
+| 配置 | schema 驱动的表单，点路径局部保存 |
+
+配置：
+
+```toml
+[webui]
+enable = true
+host = "127.0.0.1"
+port = 5311
+access_token = ""      # 非空则需在页面右上角填入；对外暴露时必须设置
+log_capacity = 2000    # 内存中保留的日志条数
+```
+
+前端源码在 `webui/`，自行修改后重新构建：
+
+```bash
+cd webui
+npm install
+npm run build      # 产物输出到 webui/dist，由 Rust 侧托管
+npm run dev        # 开发模式，热更新（API 自动代理到 5311）
+```
 
 ## 命令行
 
@@ -189,6 +228,11 @@ src/
 │   ├── rule.rs          规则：匹配方式 / 权限 / 范围
 │   ├── builtin.rs       内置插件（as 状态查询）
 │   └── mod.rs           Plugin / PluginContext / PluginRegistry
+├── webui/               ★ 网页控制台
+│   ├── api.rs           HTTP API + 前端托管
+│   └── mod.rs           构建产物目录定位
+├── logbuf.rs            内存日志环形缓冲（供 WebUI 与 SSE）
+├── app.rs               应用装配：配置 → 插件 → 适配器 → 分发
 └── onebot11/            OneBot v11 适配器
     ├── action.rs        action-echo 调用（ApiCaller）+ 常用 API 封装
     ├── connection.rs    连接生命周期、Bot 注册表、EventBus
@@ -397,7 +441,8 @@ if let Some(bot) = bots.get(&10001.into()).await {
 ## 测试
 
 ```bash
-cargo test                      # Rust：128 个单元 + 9 个端到端 + 1 个文档测试
+cargo test                      # Rust：150 个单元 + 9 个端到端 + 2 个文档测试
+cd webui && npm run build       # 前端：TypeScript 类型检查 + Vite 构建
 cargo test --test e2e_onebot11  # 仅端到端（真实 WebSocket 连接）
 node --test test/               # Node：37 个测试（配置、进程管理、参数解析）
 ```
@@ -432,7 +477,9 @@ aster config path    # 打印配置文件路径
 ## 后续计划
 
 - [x] 插件系统（命令匹配、优先级、权限、范围）
-- [ ] 插件热重载与外部插件目录
+- [x] WebUI（TypeScript + HTTP API）
+- [x] 插件市场（清单仓库 + 模板）
+- [ ] 插件运行时加载（当前为编译期）
 - [ ] 命令冷却与限流
 - [ ] 正向 WebSocket（框架主动连协议端）与 HTTP POST 上报
 - [ ] 其他适配器（Satori / Milky / GsCore）
